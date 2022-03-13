@@ -1,16 +1,16 @@
 [submodule "dispatcher"]
 	path = dispatcher
 	url = https://github.com/AdaptiveComputationLab/dispatcher.git
-    branch = master
+	branch = master
 [submodule "cuckoo"]
 	path = cuckoo
-    url = https://github.com/pwnslinger/cuckoo.git
-    branch = wip/patch_aux
+	url = https://github.com/pwnslinger/cuckoo.git
+	branch = wip/patch_aux
 [submodule "vmcloak"]
 	path = vmcloak
 	url = https://github.com/AdaptiveComputationLab/vmcloak.git
-    branch = dev/vmware
+	branch = dev/vmware
 [submodule "detox"]
 	path = detox
 	url = https://github.com/AdaptiveComputationLab/detox.git
-    branch = master
+	branch = master
