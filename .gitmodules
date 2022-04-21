@@ -1,16 +1,16 @@
 [submodule "dispatcher"]
 	path = dispatcher
-	url = https://github.com/sandbornm/dispatcher.git
+	url = git@github.com:sandbornm/dispatcher.git
 	branch = master
 [submodule "cuckoo"]
 	path = cuckoo
-	url = https://github.com/sandbornm/cuckoo.git
+	url = git@github.com:sandbornm/cuckoo.git
 	branch = wip/patch_aux
 [submodule "vmcloak"]
 	path = vmcloak
-	url = https://github.com/sandbornm/vmcloak.git.git
+	url = git@github.com:sandbornm/vmcloak.git
 	branch = dev/vmware
 [submodule "detox"]
 	path = detox
-	url = https://github.com/AdaptiveComputationLab/detox.git
+	url = git@github.com:sandbornm/detox.git
 	branch = master
