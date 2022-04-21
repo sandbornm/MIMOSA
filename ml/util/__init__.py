@@ -1,7 +1,12 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import learning_curve
 
+
+def makedir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 # https://scikit-learn.org/stable/auto_examples/model_selection/plot_learning_curve.html
 def plot_learning_curve(
