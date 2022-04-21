@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import RepeatedKFold, learning_curve, ShuffleSplit
+from sklearn.model_selection import RepeatedKFold
 from sklearn.metrics import accuracy_score, recall_score
 
 from keras.models import Sequential
