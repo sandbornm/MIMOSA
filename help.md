@@ -9,7 +9,7 @@ If after the vm is started you would like to view the guest information (guest a
 __user__ be sure to change ansible_user in dispatcher/hosts as well as cuckoo_user in 
 
 
-## Progress for Ubuntu20.04 host
+## Progress for Ubuntu20.04 metal host (user: michael)
 
 Differences from ubuntu 16
 - comment out python-pip and virtualenv
@@ -29,14 +29,31 @@ VM Backend, config, ok, changed, skipped, ignored, exection time (approx, s):
 - [x] vsphere, win7x86_conf4, 34, 9, 35, 1
 - [x] avd, win7x86_conf4, 34, 9, 35, 1
 
-## Progress for Ubuntu16.04 VirtualBox host
 
+
+## Progress for Ubuntu16.04 VirtualBox host (user: ubuntu)
+VM Backend, config, ok, changed, skipped, ignored, exection time (approx, s):
+- [] virtualbox, win7x86_conf4, 42, 12, 27, 1
+- [] vmware, win7x86_conf4, 42, 15, 27, 1 
+- [] kvm, win7x86_conf4, 47, 22, 22, 1
+- [] qemu, win7x86_conf4, 34, 9, 35, 1
+- [] esx, win7x86_conf4, 34, 9, 35, 1
+- [] xenserver, win7x86_conf4, 34, 9, 35, 1
+- [] vsphere, win7x86_conf4, 34, 9, 35, 1
+- [] avd, win7x86_conf4, 34, 9, 35, 1
 
 ## updates
 - dispatcher/samples/sampler.py: select from a number specified number of 
+- dispatcher/runner.py: automate ansible-playbook call with specified configuration, number of samples, etc
+- util/get_reports.py: given dir bool or md5sum, and store bool, show or save a json file of the sample behavior, if it exists. store the file in fetched_reports
 
 ## random/known issues
 
+(ubuntu 20 metal)
+
 - failed to update apt cache unknown reason: https://githubhot.com/repo/pythops/jetson-nano-image/issues/31
-	- apt update appears to modify /etc/resolv.conf nameserver value (? trying to repro)
+	- apt update appears to modify /etc/resolv.conf nameserver value (? trying to repro- changed nameserver to 8.8.8.8 appears to resolve)
 - vmware bundle checksum did not match 3212ed00463784ca8c67b5acd2c8d1cd, was 81e3cc66e5ce815457ae94ad52093ab3
+
+(ubuntu 16 vbox host)
+
