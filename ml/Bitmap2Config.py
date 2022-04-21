@@ -139,6 +139,3 @@ if __name__ == '__main__':
 
     # train on bitmap
     train_and_plot(X, y)
-
-
-
