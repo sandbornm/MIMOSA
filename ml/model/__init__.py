@@ -42,21 +42,21 @@ def train_epoch(net, device, dataloader, loss_fn, optimizer, **kwargs):
     net.train()
     with tqdm(total=n_train, desc=f'Epoch {epoch + 1}/{epochs}', unit='img') as pbar:
         for batch in dataloader:
-            images = batch['image']
+            examples = batch['example']
             labels = batch['label']
             labels = torch.squeeze(labels).float()
-            images, labels = images.to(device), labels.to(device)
+            examples, labels = examples.to(device), labels.to(device)
             optimizer.zero_grad()
-            output = net(images)
+            output = net(examples)
             loss = loss_fn(output, labels)
             loss.backward()
             optimizer.step()
-            train_loss += loss.item() * images.size(0)
+            train_loss += loss.item() * examples.size(0)
 
             metrics = calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
             train_metrics = metrics if not train_metrics else merge_dicts(train_metrics, metrics)
 
-            pbar.update(images.shape[0])
+            pbar.update(examples.shape[0])
 
     return train_loss, train_metrics
 
@@ -66,13 +66,15 @@ def val_epoch(net, device, dataloader, loss_fn):
     val_metrics = None
     net.eval()
     for batch in dataloader:
-        images = batch['image']
+        examples = batch['example']
         labels = batch['label']
         labels = torch.squeeze(labels).float()
-        images, labels = images.to(device), labels.to(device)
-        output = net(images)
-        loss = loss_fn(output, labels)
-        val_loss += loss.item() * images.size(0)
+        examples, labels = examples.to(device), labels.to(device)
+
+        with torch.no_grad():
+            output = net(examples)
+            loss = loss_fn(output, labels)
+            val_loss += loss.item() * examples.size(0)
 
         metrics = calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
         val_metrics = metrics if not val_metrics else merge_dicts(val_metrics, metrics)

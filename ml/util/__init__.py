@@ -23,7 +23,7 @@ def get_parser():
     parser.add_argument('--name', '-n', type=str, default='Malware2Config_Multilabel', help='Experiment name')
     parser.add_argument('--load', '-f', type=str, default='', help='path to net to load')
     parser.add_argument('--frequency', '-q', type=int, default=0, help='save frequency. default=end of training')
-    parser.add_argument('--mode', '-m', type=str, default='train', help='trainig mode [train | cross_val]')
+    parser.add_argument('--mode', '-m', type=str, default='train', help='training mode [train | cross_val]')
 
     # hyperparams
     parser.add_argument('-e', '--epochs', metavar='E', type=int, default=20, help='Number of epochs', dest='epochs')
