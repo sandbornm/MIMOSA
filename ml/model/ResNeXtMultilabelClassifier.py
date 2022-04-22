@@ -4,7 +4,7 @@ from torchvision import models
 criterion = nn.BCELoss()
 
 
-class ImageMultilabelClassifier(nn.Module):
+class ResNeXtMultilabelClassifier(nn.Module):
     def __init__(self, n_classes, pretrained=False):
         """
         Image multilabel classifier using ResNeXt
