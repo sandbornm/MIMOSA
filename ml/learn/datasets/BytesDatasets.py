@@ -1,14 +1,13 @@
 from os.path import join
 import numpy as np
 import torch
-import cv2
 import glob
 import pandas as pd
 from torch.utils.data import Dataset
 
 
 class MalwareBytesDataset(Dataset):
-    def __init__(self, examples_dir: str, labels_csv: str, transform=None, sz=None):
+    def __init__(self, examples_dir: str, labels_csv: str, transform=None, sz=2**10):
         """
         Dataset class malware binaries for deep learning multilabel classification
         """
@@ -40,8 +39,10 @@ class MalwareBytesDataset(Dataset):
         with open(path, "rb") as f:
             bytes = np.fromfile(f, dtype)
 
-        if self.sz:
+        if self.sz >= len(bytes):
             bytes = bytes[:self.sz]
+        else:
+            bytes = np.hstack([bytes, np.zeros(self.sz - len(bytes), dtype)])
 
         # get the label
         label = self.labels.loc[self.labels['sha1sum'] == hash]

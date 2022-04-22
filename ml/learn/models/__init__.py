@@ -3,6 +3,9 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
+import ImageModels
+import BytesModels
+
 
 def merge_dicts(dict_1, dict_2):
     """
@@ -13,6 +16,31 @@ def merge_dicts(dict_1, dict_2):
         if key in dict_1 and key in dict_2:
             dict_3[key] = dict_1[key] + value  # since dict_1 val overwritten by above merge
     return dict_3
+
+
+def build_model(args, n_classes):
+    modality = args.modality.lower()
+    arch = args.arch.lower()
+    if modality == 'image':
+        if arch == 'resnext':
+            net = ImageModels.ResNeXt50MultilabelClassifier(n_classes, pretrained=args.pretrain)
+        elif arch == 'resnet':
+            net = ImageModels.ResNet34MultilabelClassifier(n_classes, pretrained=args.pretrain)
+        else:
+            raise ValueError('Unknown architecture: ', args.arch)
+        criterion = ImageModels.criterion
+    elif modality == 'bytes':
+        if arch == 'conv':
+            net = BytesModels.Conv1DBytesMultilabelClassifier(n_classes)
+        elif arch == 'ff':
+            net = BytesModels.FFBytesMultilabelClassifier(args.size, n_classes)
+        else:
+            raise ValueError('Unknown architecture: ', args.arch)
+        criterion = BytesModels.criterion
+    else:
+        raise ValueError('Unknown modality: ', args.modality)
+
+    return net, criterion
 
 
 # Use threshold to define predicted labels and invoke sklearn's metrics with different averaging strategies.

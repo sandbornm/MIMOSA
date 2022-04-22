@@ -16,26 +16,28 @@ def get_parser():
     """
     parser = argparse.ArgumentParser(description='Train a Malware2Config mulitlabel classifier')
 
-    # meta setup
+    # metasetup
     parser.add_argument('--examples_dir', '-x', type=str, default="", help='path to image dir')
     parser.add_argument('--labels_csv', '-y', type=str, default="", help='path to labels csv')
-    parser.add_argument('--image_sz', '-s', type=int, nargs='+', default=[64,64], help='resize images to these dims. format: --image_sz 64 64')
+    parser.add_argument('--size', '-s', type=int, nargs='+', default=[64,64], help='resize images to these dims. image format: --size 64 64, bytes format: --size 1024')
     parser.add_argument('--name', '-n', type=str, default='Malware2Config_Multilabel', help='Experiment name')
     parser.add_argument('--load', '-f', type=str, default='', help='path to net to load')
     parser.add_argument('--frequency', '-q', type=int, default=0, help='save frequency. default=end of training')
     parser.add_argument('--mode', '-m', type=str, default='train', help='training mode [train | cross_val]')
+    parser.add_argument('--modality', '-i', type=str, default='image', help='input modality [image | bytes]')
+    parser.add_argument('--arch', '-a', type=str, default='resnext', help='architecture type given modality. image: [resnext | resnet], bytes: [conv | ff]')
 
     # hyperparams
-    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=20, help='Number of epochs', dest='epochs')
-    parser.add_argument('-b', '--batch_size', metavar='B', type=int, nargs='?', default=16, help='Batch size',
+    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=20, help='number of epochs', dest='epochs')
+    parser.add_argument('-b', '--batch_size', metavar='B', type=int, nargs='?', default=16, help='batch size',
                         dest='batchsize')
     parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=1e-3,
                         help='Learning rate', dest='lr')
-    parser.add_argument('-v', '--val_percent', metavar='V', type=float, default=0.2, help='Percent for validation set', dest='val')
+    parser.add_argument('-v', '--val_percent', metavar='V', type=float, default=0.2, help='percent of training data to use for validation set', dest='val')
+    parser.add_argument('--pretrain', action='store_true', help='use pretrained models')
 
 
     return parser
-
 
 # https://scikit-learn.org/stable/auto_examples/model_selection/plot_learning_curve.html
 def plot_learning_curve(
