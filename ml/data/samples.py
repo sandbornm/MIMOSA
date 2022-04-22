@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import numpy as np
 import cv2
+from math import sqrt, ceil
 
 
 def extract_binaries(pbitmap, psamples):
@@ -54,11 +55,12 @@ def samples2images(pbins):
         try:
             with open('bins/'+bin, "rb") as f:
                 bytes = np.fromfile(f, dtype)
-                width = int(len(bytes)**0.5) # get nearest feasible square root
+                width = int(ceil(sqrt(len(bytes))))  # get nearest greater square root
+                bytes = np.hstack([bytes, np.zeros(width**2 - len(bytes), dtype)])
                 if min_width is None or width < min_width:
                     min_width = width
 
-                img = np.reshape(bytes[:width**2], (width, width)) # create square image
+                img = np.reshape(bytes, (width, width))  # create square image
                 cv2.imwrite('imgs/%s.png' % hash, img)
 
         except IOError:
@@ -129,15 +131,15 @@ def create_bitmap_dataset(pbitmap, pevasion, bitmap_sz=15):
 
 if __name__ == '__main__':
 
-    # find binaries in sample dataset
-    fbitmap = 'hash_bitmap.tsv'
-    psamples = '../../../data/samples'
-    extract_binaries(fbitmap, psamples)
+    # # find binaries in sample dataset
+    # fbitmap = 'hash_bitmap.tsv'
+    # psamples = '../../../data/samples'
+    # extract_binaries(fbitmap, psamples)
 
     # convert binary samples to images via numpy and cv2
     samples2images('bins')
 
-    # create bitmap dataset
-    fbitmap = 'hash_bitmap.tsv'
-    fevasion = 'fixed_evasion.csv'
-    X, y = create_bitmap_dataset(fbitmap, fevasion)
+    # # create bitmap dataset
+    # fbitmap = 'hash_bitmap.tsv'
+    # fevasion = 'fixed_evasion.csv'
+    # X, y = create_bitmap_dataset(fbitmap, fevasion)

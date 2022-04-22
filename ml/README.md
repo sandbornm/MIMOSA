@@ -1,6 +1,8 @@
 # Mimosa-ML
 Zach Stoebner
 
+Leveraging ML to effectively scale dynamic malware analysis. Specifically, a deep learning multilabel classifier maps a stealthy malware sample to a set of configurations under which it is most likely to run. 
+
 ## Main
 - [Bitmap2Config](/Bitmap2Config.py): multilabel classification of a pre-labeled sample bitmap of which artifacts that it detects to a config bitmap. 
 
