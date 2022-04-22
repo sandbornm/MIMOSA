@@ -11,23 +11,23 @@ def merge_dicts(dict_1, dict_2):
     dict_3 = {**dict_1, **dict_2}
     for key, value in dict_3.items():
         if key in dict_1 and key in dict_2:
-            dict_3[key] = dict_1[key] + [value]  # since dict_1 val overwritten by above merge
+            dict_3[key] = dict_1[key] + value  # since dict_1 val overwritten by above merge
     return dict_3
 
 
 # Use threshold to define predicted labels and invoke sklearn's metrics with different averaging strategies.
 def calculate_metrics(pred, target, threshold=0.5):
     pred = np.array(pred > threshold, dtype=float)
-    return {'micro/precision': precision_score(y_true=target, y_pred=pred, average='micro', zero_division=1),
-            'micro/recall': recall_score(y_true=target, y_pred=pred, average='micro', zero_division=1),
-            'micro/f1': f1_score(y_true=target, y_pred=pred, average='micro', zero_division=1),
-            'macro/precision': precision_score(y_true=target, y_pred=pred, average='macro', zero_division=1),
-            'macro/recall': recall_score(y_true=target, y_pred=pred, average='macro', zero_division=1),
-            'macro/f1': f1_score(y_true=target, y_pred=pred, average='macro', zero_division=1),
-            'samples/precision': precision_score(y_true=target, y_pred=pred, average='samples', zero_division=1),
-            'samples/recall': recall_score(y_true=target, y_pred=pred, average='samples', zero_division=1),
-            'samples/f1': f1_score(y_true=target, y_pred=pred, average='samples', zero_division=1),
-            'accuracy': accuracy_score(y_true=target, y_pred=pred)
+    return {'micro/precision': [precision_score(y_true=target, y_pred=pred, average='micro', zero_division=1)],
+            'micro/recall': [recall_score(y_true=target, y_pred=pred, average='micro', zero_division=1)],
+            'micro/f1': [f1_score(y_true=target, y_pred=pred, average='micro', zero_division=1)],
+            'macro/precision': [precision_score(y_true=target, y_pred=pred, average='macro', zero_division=1)],
+            'macro/recall': [recall_score(y_true=target, y_pred=pred, average='macro', zero_division=1)],
+            'macro/f1': [f1_score(y_true=target, y_pred=pred, average='macro', zero_division=1)],
+            'samples/precision': [precision_score(y_true=target, y_pred=pred, average='samples', zero_division=1)],
+            'samples/recall': [recall_score(y_true=target, y_pred=pred, average='samples', zero_division=1)],
+            'samples/f1': [f1_score(y_true=target, y_pred=pred, average='samples', zero_division=1)],
+            'accuracy': [accuracy_score(y_true=target, y_pred=pred)]
             }
 
 
