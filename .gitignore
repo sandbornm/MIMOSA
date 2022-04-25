@@ -1,6 +1,7 @@
 # ML
 ml/data/bins
 ml/data/imgs
+ml/cp
 
 # Mac BS
 *.DS_Store
