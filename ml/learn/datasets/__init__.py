@@ -1,7 +1,8 @@
+import numpy as np
 from torchvision import transforms
 
-import BytesDatasets
-import ImageDatasets
+from . import BytesDatasets
+from . import ImageDatasets
 
 
 def build_dataset(args):

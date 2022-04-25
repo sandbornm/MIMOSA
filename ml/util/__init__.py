@@ -19,23 +19,24 @@ def get_parser():
     # metasetup
     parser.add_argument('--examples_dir', '-x', type=str, default="", help='path to image dir')
     parser.add_argument('--labels_csv', '-y', type=str, default="", help='path to labels csv')
-    parser.add_argument('--size', '-s', type=int, nargs='+', default=[64,64], help='resize images to these dims. image format: --size 64 64, bytes format: --size 1024')
-    parser.add_argument('--name', '-n', type=str, default='Malware2Config_Multilabel', help='Experiment name')
+    parser.add_argument('--name', '-n', type=str, default='M2C', help='Experiment name. default: M2C')
     parser.add_argument('--load', '-f', type=str, default='', help='path to net to load')
-    parser.add_argument('--frequency', '-q', type=int, default=0, help='save frequency. default=end of training')
-    parser.add_argument('--mode', '-m', type=str, default='train', help='training mode [train | cross_val]')
-    parser.add_argument('--modality', '-i', type=str, default='image', help='input modality [image | bytes]')
-    parser.add_argument('--arch', '-a', type=str, default='resnext', help='architecture type given modality. image: [resnext | resnet], bytes: [conv | ff]')
+    parser.add_argument('--frequency', '-q', type=int, default=0, help='save frequency. default= 0 (end of training)')
+    parser.add_argument('--mode', '-m', type=str, default='train', help='training mode [train | cross_val]. default: train')
+    parser.add_argument('--modality', '-i', type=str, default='image', help='input modality [image | bytes]. default: image')
+    parser.add_argument('--arch', '-a', type=str, default='resnet', help='architecture type given modality. image: [resnext | resnet], bytes: [conv | ff]. default: resnet')
 
     # hyperparams
-    parser.add_argument('-e', '--epochs', metavar='E', type=int, default=20, help='number of epochs', dest='epochs')
-    parser.add_argument('-b', '--batch_size', metavar='B', type=int, nargs='?', default=16, help='batch size',
+    parser.add_argument('--size', '-s', type=int, nargs='+', default=[64,64], help='resize images to these dims (multiplied for bytes). default: --size 64 64')
+    parser.add_argument('-e', '--epochs', type=int, default=20, help='number of epochs. default: 20', dest='epochs')
+    parser.add_argument('-b', '--batch_size', type=int, default=16, help='batch size. default: 16',
                         dest='batchsize')
-    parser.add_argument('-l', '--learning-rate', metavar='LR', type=float, nargs='?', default=1e-3,
-                        help='Learning rate', dest='lr')
-    parser.add_argument('-v', '--val_percent', metavar='V', type=float, default=0.2, help='percent of training data to use for validation set', dest='val')
-    parser.add_argument('--pretrain', action='store_true', help='use pretrained models')
-
+    parser.add_argument('-l', '--learning-rate', type=float, default=1e-3,
+                        help='Learning rate. default: 1e-3', dest='lr')
+    parser.add_argument('-v', '--val_percent', metavar='V', type=float, default=0.2, help='percent of training data to use for validation set. default: 0.2', dest='val')
+    parser.add_argument('--pretrain', action='store_true', help='use pretrained vision models')
+    parser.add_argument('--variant', '-va', type=str, default='dense', help='model variant [dense | branch]. default: dense')
+    parser.add_argument('--hidden', '-hi', type=int, nargs='+', default=[512], help='dimensions for hidden dense layers. default: --hidden 512')
 
     return parser
 

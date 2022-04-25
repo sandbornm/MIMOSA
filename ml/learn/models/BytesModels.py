@@ -6,9 +6,15 @@ criterion = nn.BCELoss()
 
 
 class FFBytesMultilabelClassifier(nn.Module):
-    def __init__(self, n_input, n_classes, n_hidden=None, variant: str= 'dense'):
+    def __init__(self, n_input, n_classes, n_hidden=None, variant: str='dense'):
         """
         Bytes-vector multilabel classifier using ResNeXt
+
+        Parameters:
+            n_input = input vector size
+            n_classes = number of output classes
+            n_hidden = list of number of hidden features where first entry is the number of conv filters
+            variant = model variant
         """
         super().__init__()
         if n_hidden is None:
@@ -52,9 +58,14 @@ class FFBytesMultilabelClassifier(nn.Module):
 
 
 class Conv1DBytesMultilabelClassifier(nn.Module):
-    def __init__(self, n_classes, n_hidden=None, variant='dense'):
+    def __init__(self, n_classes, n_hidden=None, variant: str='dense'):
         """
         Bytes-vector multilabel classifier using ResNeXt
+
+        Parameters:
+            n_classes = number of output classes
+            n_hidden = list of number of hidden features where first entry is the number of conv filters
+            variant = model variant
         """
         super().__init__()
         if n_hidden is None:

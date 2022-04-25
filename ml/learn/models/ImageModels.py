@@ -13,11 +13,12 @@ class ResNet34MultilabelClassifier(nn.Module):
         """
         super().__init__()
         resnet = models.resnet34(pretrained=pretrained)
+        in_features = resnet.fc.in_features
         resnet.fc = nn.Identity()  # drop last layer
 
         self.leaf = nn.Sequential(
             nn.Dropout(p=0.2),
-            nn.Linear(in_features=resnet.fc.in_features, out_features=1)
+            nn.Linear(in_features=in_features, out_features=1)
         )
         self.leaves = nn.ModuleList([self.leaf] * n_classes)
 
