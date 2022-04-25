@@ -12,16 +12,20 @@ from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 
-from Malware2Config import train
+from learn import train
+from util import get_parser
 
-def search(config, checkpoint_dir=None, data_dir=None):
-    return
-
-if __name__ == '__main__':
+def search(checkpoint_dir=None, data_dir=None):
     config = {
         "l1": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
         "l2": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
         "lr": tune.loguniform(5e-5, 1e-1),
         "batch_size": tune.choice([2, 4, 8, 16])
     }
-    search(config)
+    return
+
+if __name__ == '__main__':
+    parser = get_parser()
+    args = parser.parse_args()
+    
+    search()

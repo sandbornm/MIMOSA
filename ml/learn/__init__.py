@@ -7,7 +7,6 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
 
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
 from sklearn.model_selection import RepeatedKFold
 
 from ray import tune
@@ -18,79 +17,11 @@ import util
 
 from . import datasets
 from . import models
+from . import metrics
 
 
-def log_metrics(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch):
-    with experiment.train():
-        experiment.log_metric('Loss', train_loss, epoch=epoch)
-        for metric, values in train_metrics.items():
-            experiment.log_metric(metric, np.mean(values), epoch=epoch)
-    with experiment.validate():
-        experiment.log_metric('Loss', val_loss, epoch=epoch)
-        for metric, values in val_metrics.items():
-            experiment.log_metric(metric, np.mean(values), epoch=epoch)
-
-
-def log_reports(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch):
-    with experiment.train():
-        experiment.log_metric('Loss', train_loss, epoch=epoch)
-    with experiment.validate():
-        experiment.log_metric('Loss', val_loss, epoch=epoch)
-
-    labels = train_metrics.keys()
-    scores = train_metrics[0].keys()
-    for label in labels:
-        for score in scores:
-            with experiment.train():
-                experiment.log_metric(label+'/'+score, np.mean(train_metrics[label][score]), epoch=epoch)
-            with experiment.validate():
-                experiment.log_metric(label+'/'+score, np.mean(val_metrics[label][score]), epoch=epoch)
-
-
-def merge_metrics(dict_1: dict, dict_2: dict):
-    """
-    Merge dicts with common keys as list
-    """
-    dict_3 = {**dict_1, **dict_2}
-    for key, value in dict_3.items():
-        if key in dict_1 and key in dict_2:
-            dict_3[key] = dict_1[key] + value  # since dict_1 val overwritten by above merge
-    return dict_3
-
-
-def merge_reports(master: dict, report: dict):
-    """
-    Merge classification reports into a master list
-    """
-    keys = master.keys()
-    ret = copy.deepcopy(master)
-    for key in keys:
-        scores = report[key]
-        for score, value in scores.items():
-            ret[key][score] += [value]
-
-    return ret
-
-# generate a classification report
-def report(pred, target, configs, threshold=0.5):
-    pred = np.array(pred > threshold, dtype=float)
-    return classification_report(target, pred, output_dict=True, target_names=configs, zero_division=1)
-
-
-# Use threshold to define predicted labels and invoke sklearn's metrics with different averaging strategies.
-def calculate_metrics(pred, target, threshold=0.5):
-    pred = np.array(pred > threshold, dtype=float)
-    return {'micro/precision': [precision_score(y_true=target, y_pred=pred, average='micro', zero_division=1)],
-            'micro/recall': [recall_score(y_true=target, y_pred=pred, average='micro', zero_division=1)],
-            'micro/f1': [f1_score(y_true=target, y_pred=pred, average='micro', zero_division=1)],
-            'macro/precision': [precision_score(y_true=target, y_pred=pred, average='macro', zero_division=1)],
-            'macro/recall': [recall_score(y_true=target, y_pred=pred, average='macro', zero_division=1)],
-            'macro/f1': [f1_score(y_true=target, y_pred=pred, average='macro', zero_division=1)],
-            'samples/precision': [precision_score(y_true=target, y_pred=pred, average='samples', zero_division=1)],
-            'samples/recall': [recall_score(y_true=target, y_pred=pred, average='samples', zero_division=1)],
-            'samples/f1': [f1_score(y_true=target, y_pred=pred, average='samples', zero_division=1)],
-            'accuracy': [accuracy_score(y_true=target, y_pred=pred)]
-            }
+def parse_config(config):
+    return
 
 
 # https://medium.com/dataseries/k-fold-cross-validation-with-pytorch-and-sklearn-d094aa00105f
@@ -115,8 +46,8 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             optimizer.step()
             train_loss += loss.item() * examples.size(0)
 
-            metrics = calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
-            train_metrics = metrics if not train_metrics else merge_metrics(train_metrics, metrics)
+            mtr = metrics.calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
+            train_metrics = mtr if not train_metrics else metrics.merge_metrics(train_metrics, mtr)
 
             # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
             # train_metrics = metrics if not train_metrics else merge_reports(train_metrics, metrics)
@@ -141,8 +72,8 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
             loss = loss_fn(output, labels)
             val_loss += loss.item() * examples.size(0)
 
-        metrics = calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
-        val_metrics = metrics if not val_metrics else merge_metrics(val_metrics, metrics)
+        mtr = metrics.calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
+        val_metrics = mtr if not val_metrics else metrics.merge_metrics(val_metrics, mtr)
 
         # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
         # val_metrics = metrics if not val_metrics else merge_reports(val_metrics, metrics)
@@ -150,18 +81,20 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
     return val_loss, val_metrics
 
 
-def cross_val(net,
-              dataset,
-              device,
-              epochs,
-              batch_size,
-              lr,
-              criterion,
-              exp_name
-              ):
+def cross_val(config):
     """
     Repeated K-Fold cross-validation for a PyTorch classifier
     """
+
+    net = config['net']
+    dataset = config['dataset']
+    device = config['device']
+    epochs = config['epochs']
+    batch_size = config['batch_size']
+    lr = config['lr']
+    criterion = config['criterion']
+    exp_name = config['exp_name']
+
     # comet setup
     experiment = Experiment(
         api_key="k86kE4n1wy7wQkkCmvZeFAV3M",
@@ -204,11 +137,11 @@ def cross_val(net,
             train_loss /= len(train_sampler)
             val_loss /= len(val_sampler)
 
-            log_metrics(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch)
+            metrics.log_metrics(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch)
             # log_reports(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch)
 
-            mean_train_acc = np.mean(train_metrics['accuracy'])
-            mean_val_acc = np.mean(val_metrics['accuracy'])
+            mean_train_acc = np.mean(train_metrics['samples/f1'])
+            mean_val_acc = np.mean(val_metrics['samples/f1'])
 
             scheduler.step(mean_val_acc)
 
@@ -233,20 +166,21 @@ def cross_val(net,
         foldperf['fold{}'.format(fold + 1)] = history
 
 
-def train(net,
-          dataset,
-          device,
-          epochs,
-          batch_size,
-          lr,
-          val_percent,
-          frequency,
-          criterion,
-          exp_name
-          ):
+def train(config):
     """
     Standard iterative training for a PyTorch classifier
     """
+
+    net = config['net']
+    dataset = config['dataset']
+    device = config['device']
+    epochs = config['epochs']
+    batch_size = config['batch_size']
+    lr = config['lr']
+    val_percent = config['val_percent']
+    frequency = config['frequency']
+    criterion = config['criterion']
+    exp_name = config['exp_name']
 
     # comet setup
     experiment = Experiment(
@@ -299,11 +233,11 @@ def train(net,
         train_loss /= n_train
         val_loss /= n_val
 
-        log_metrics(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch)
+        metrics.log_metrics(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch)
         # log_reports(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch)
 
-        mean_train_acc = np.mean(train_metrics['accuracy'])
-        mean_val_acc = np.mean(val_metrics['accuracy'])
+        mean_train_acc = np.mean(train_metrics['samples/f1'])
+        mean_val_acc = np.mean(val_metrics['samples/f1'])
 
         scheduler.step(mean_val_acc)
 
