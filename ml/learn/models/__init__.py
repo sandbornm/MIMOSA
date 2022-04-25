@@ -5,19 +5,21 @@ from . import BytesModels
 def build_model(args, n_classes):
     modality = args.modality.lower()
     arch = args.arch.lower()
-    if modality == 'image':
-        if arch == 'resnext':
-            net = ImageModels.ResNeXt50MultilabelClassifier(n_classes, pretrained=args.pretrain)
-        elif arch == 'resnet':
-            net = ImageModels.ResNet34MultilabelClassifier(n_classes, pretrained=args.pretrain)
+    if modality.lower() == 'image':
+        if arch.lower() == 'resnext':
+            net = ImageModels.ResNeXt50MultilabelClassifier(arch.lower(), n_classes, pretrained=args.pretrain, variant=args.variant)
+        elif arch.lower() == 'resnet':
+            net = ImageModels.ResNet34MultilabelClassifier(arch.lower(), n_classes, pretrained=args.pretrain, variant=args.variant)
+        elif 'convnext' in arch.lower():
+            net = ImageModels.ConvNeXtMultilabelClassifier(arch.lower(), n_classes, pretrained=args.pretrain, variant=args.variant)
         else:
             raise ValueError('Unknown architecture: ', args.arch)
         criterion = ImageModels.criterion
-    elif modality == 'bytes':
-        if arch == 'conv':
-            net = BytesModels.Conv1DBytesMultilabelClassifier(n_classes, n_hidden=args.hidden, variant=args.variant)
-        elif arch == 'ff':
-            net = BytesModels.FFBytesMultilabelClassifier(args.size, n_classes, n_hidden=args.hidden, variant=args.variant)
+    elif modality.lower() == 'bytes':
+        if arch.lower() == 'conv':
+            net = BytesModels.Conv1DBytesMultilabelClassifier(arch.lower(), n_classes, n_hidden=args.hidden, variant=args.variant)
+        elif arch.lower() == 'ff':
+            net = BytesModels.FFBytesMultilabelClassifier(arch.lower(), args.size, n_classes, n_hidden=args.hidden, variant=args.variant)
         else:
             raise ValueError('Unknown architecture: ', args.arch)
         criterion = BytesModels.criterion

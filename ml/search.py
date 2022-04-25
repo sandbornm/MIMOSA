@@ -21,7 +21,7 @@ if __name__ == '__main__':
     config = {
         "l1": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
         "l2": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
-        "lr": tune.loguniform(1e-4, 1e-1),
+        "lr": tune.loguniform(5e-5, 1e-1),
         "batch_size": tune.choice([2, 4, 8, 16])
     }
     search(config)

@@ -24,7 +24,7 @@ def get_parser():
     parser.add_argument('--frequency', '-q', type=int, default=0, help='save frequency. default= 0 (end of training)')
     parser.add_argument('--mode', '-m', type=str, default='train', help='training mode [train | cross_val]. default: train')
     parser.add_argument('--modality', '-i', type=str, default='image', help='input modality [image | bytes]. default: image')
-    parser.add_argument('--arch', '-a', type=str, default='resnet', help='architecture type given modality. image: [resnext | resnet], bytes: [conv | ff]. default: resnet')
+    parser.add_argument('--arch', '-a', type=str, default='resnet', help='architecture type given modality. image: [resnext_(50 | 101) | resnet_(18 | 32 | 50 | 101 | 152) | convnext_(tiny | small | base | large)], bytes: [conv | ff]. default: resnet')
 
     # hyperparams
     parser.add_argument('--size', '-s', type=int, nargs='+', default=[64,64], help='resize images to these dims (multiplied for bytes). default: --size 64 64')

@@ -6,7 +6,7 @@ criterion = nn.BCELoss()
 
 
 class FFBytesMultilabelClassifier(nn.Module):
-    def __init__(self, n_input, n_classes, n_hidden=None, variant: str='dense'):
+    def __init__(self, name, n_input, n_classes, n_hidden=None, variant: str='dense'):
         """
         Bytes-vector multilabel classifier using ResNeXt
 
@@ -20,6 +20,7 @@ class FFBytesMultilabelClassifier(nn.Module):
         if n_hidden is None:
             n_hidden = [512]
 
+        self.name = name
         self.n_input = n_input
         self.n_hidden = n_hidden
         self.variant = variant
@@ -54,11 +55,11 @@ class FFBytesMultilabelClassifier(nn.Module):
         if self.variant.lower() == 'branch':
             return torch.cat([self.sigmoid(l(x)) for l in self.leaves], dim=1)
 
-        return self.sigmoid(self.base_model(x))
+        return self.sigmoid(x)
 
 
 class Conv1DBytesMultilabelClassifier(nn.Module):
-    def __init__(self, n_classes, n_hidden=None, variant: str='dense'):
+    def __init__(self, name, n_classes, n_hidden=None, variant: str='dense'):
         """
         Bytes-vector multilabel classifier using ResNeXt
 
@@ -71,6 +72,7 @@ class Conv1DBytesMultilabelClassifier(nn.Module):
         if n_hidden is None:
             n_hidden = [32, 512]
 
+        self.name = name
         self.n_classes = n_classes
         self.n_hidden = n_hidden
         self.variant = variant
@@ -109,4 +111,4 @@ class Conv1DBytesMultilabelClassifier(nn.Module):
         if self.variant.lower() == 'branch':
             return torch.cat([self.sigmoid(l(x)) for l in self.leaves], dim=1)
 
-        return self.sigmoid(self.base_model(x))
+        return self.sigmoid(x)

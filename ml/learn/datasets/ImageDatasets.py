@@ -20,7 +20,7 @@ class MalwareImageDataset(Dataset):
         self.labels = pd.read_csv(labels_csv) if '.tsv' not in labels_csv else pd.read_csv(labels_csv, sep='\t')
         self.hashes = self.labels['sha1sum'].tolist()
 
-        self.configs = self.labels.columns[1:]
+        self.classes = self.labels.columns[1:]
         self.n_examples = len(self.labels)
         self.n_classes = len(self.labels.columns) - 1
 
@@ -45,7 +45,7 @@ class MalwareImageDataset(Dataset):
 
         # get the label
         label = self.labels.loc[self.labels['sha1sum'] == hash]
-        label = label[self.configs].to_numpy()
+        label = label[self.classes].to_numpy()
 
         if self.transform:
             image = self.transform(image)

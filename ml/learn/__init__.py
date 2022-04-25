@@ -1,5 +1,4 @@
 import logging
-from comet_ml import Experiment
 from os.path import join
 import copy
 import numpy as np
@@ -13,7 +12,9 @@ from sklearn.model_selection import RepeatedKFold
 
 from ray import tune
 
-from .. import util
+from comet_ml import Experiment  # importing after torch disables autologging
+
+import util
 
 from . import datasets
 from . import models
@@ -93,12 +94,10 @@ def calculate_metrics(pred, target, threshold=0.5):
 
 
 # https://medium.com/dataseries/k-fold-cross-validation-with-pytorch-and-sklearn-d094aa00105f
-def train_epoch(net, device, dataloader, loss_fn, optimizer, **kwargs):
+def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
     n_train = kwargs['n_train']
     epoch = kwargs['epoch']
     epochs = kwargs['epochs']
-
-    configs = dataloader.dataset.configs
 
     train_loss = 0.0
     train_metrics = None
@@ -119,7 +118,7 @@ def train_epoch(net, device, dataloader, loss_fn, optimizer, **kwargs):
             metrics = calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
             train_metrics = metrics if not train_metrics else merge_metrics(train_metrics, metrics)
 
-            # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), configs)
+            # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
             # train_metrics = metrics if not train_metrics else merge_reports(train_metrics, metrics)
 
             pbar.update(examples.shape[0])
@@ -127,10 +126,7 @@ def train_epoch(net, device, dataloader, loss_fn, optimizer, **kwargs):
     return train_loss, train_metrics
 
 
-def val_epoch(net, device, dataloader, loss_fn):
-
-    configs = dataloader.dataset.configs
-
+def val_epoch(net, device, dataloader, loss_fn, classes):
     val_loss = 0.0
     val_metrics = None
     net.eval()
@@ -148,7 +144,7 @@ def val_epoch(net, device, dataloader, loss_fn):
         metrics = calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
         val_metrics = metrics if not val_metrics else merge_metrics(val_metrics, metrics)
 
-        # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), configs)
+        # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
         # val_metrics = metrics if not val_metrics else merge_reports(val_metrics, metrics)
 
     return val_loss, val_metrics
@@ -181,6 +177,8 @@ def cross_val(net,
     }
     experiment.log_parameters(hyper_params)
 
+    classes = dataset.classes
+
     foldperf = {}
     cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
     for fold, (train_idx, val_idx) in enumerate(cv.split(np.arange(len(dataset)))):
@@ -200,8 +198,8 @@ def cross_val(net,
         history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
 
         for epoch in range(epochs):
-            train_loss, train_metrics = train_epoch(model, device, train_loader, criterion, optimizer)
-            val_loss, val_metrics = val_epoch(model, device, val_loader, criterion)
+            train_loss, train_metrics = train_epoch(model, device, train_loader, criterion, classes, optimizer)
+            val_loss, val_metrics = val_epoch(model, device, val_loader, criterion, classes)
 
             train_loss /= len(train_sampler)
             val_loss /= len(val_sampler)
@@ -288,13 +286,15 @@ def train(net,
         Device:          {device.type}
     ''')
 
+    classes = dataset.classes
+
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)
 
     for epoch in range(epochs):
         train_kwargs = {'n_train': n_train, 'epoch': epoch, 'epochs': epochs}
-        train_loss, train_metrics = train_epoch(net, device, train_loader, criterion, optimizer, **train_kwargs)
-        val_loss, val_metrics = val_epoch(net, device, val_loader, criterion)
+        train_loss, train_metrics = train_epoch(net, device, train_loader, criterion, classes, optimizer, **train_kwargs)
+        val_loss, val_metrics = val_epoch(net, device, val_loader, criterion, classes)
 
         train_loss /= n_train
         val_loss /= n_val
@@ -325,7 +325,7 @@ def train(net,
             with tune.checkpoint_dir(epoch) as checkpoint_dir:
                 path = join(checkpoint_dir, "checkpoint")
                 torch.save((net.state_dict(), optimizer.state_dict()), path)
-    #         makedir(save_dir)
+    #         util.makedir(save_dir)
     #         torch.save(net.state_dict(),
     #                   join(save_dir, f'{exp_name}_epoch{epoch + 1}.pth'))
     #         logging.info(f'Checkpoint {epoch + 1} saved !')
