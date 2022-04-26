@@ -1,3 +1,4 @@
+import sys
 import logging
 from os.path import join
 import copy
@@ -26,9 +27,28 @@ def create_config(args):
     """
     Create a config from a dictionary of args
     """
+    examples_dir = args['examples_dir']
+    labels_csv = args['labels_csv']
+    name = args['name']
+    load = args['load']
+    frequency = args['frequency']
+    mode = args['mode']
+    modality = args['modality']
+    arch = args['arch']
+    size = args['size']
+    epochs = args['epochs']
+    batchsize = args['batchsize']
+    lr = args['lr']
+    val = args['val']
+    pretrain = args['pretrain']
+    variant = args['variant']
+    hidden = args['hidden']
+    optim = args['optim']
 
-    if args['modality'] == 'bytes':
+
+    if 'bytes' in modality.lower():
         args['size'] = np.prod(args['size'])
+        size = np.prod(size)
 
     # create dataset
     dataset = datasets.build_dataset(args)
@@ -51,24 +71,35 @@ def create_config(args):
     logging.info(f'Using device {device}')
 
     # attempt load if spec'd
-    if args['load']:
+    if load:
         net.load_state_dict(
-            torch.load(args['load'], map_location=device)
+            torch.load(load, map_location=device)
         )
-        logging.info('net loaded from %s' % args['load'])
+        logging.info('net loaded from %s' % load)
 
     net.to(device=device)
+
+    if 'sgd' in optim.lower():
+        optimizer = torch.optim.SGD(net.parameters(), lr=lr)
+    elif 'adam' in optim.lower():
+        optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    elif 'rmsprop' in optim.lower():
+        optimizer = torch.optim.RMSprop(net.parameters(), lr=lr)
+    else:
+        raise ValueError('Unsupported optimizer: ', optim)
+
 
     config = {'net': net,
               'dataset': dataset,
               'device': device,
-              'epochs': args['epochs'],
-              'batch_size': args['batchsize'],
-              'lr': args['lr'],
-              'val_percent': args['val'],
-              'frequency': args['frequency'],
+              'epochs': epochs,
+              'batch_size': batchsize,
+              'lr': lr,
+              'val_percent': val,
+              'frequency': frequency,
               'criterion': criterion,
-              'exp_name': args['name'],
+              'exp_name': name,
+              'optim': optimizer
               }
     return config
 
@@ -90,6 +121,7 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             examples, labels = examples.to(device), labels.to(device)
             optimizer.zero_grad()
             output = net(examples)
+            output = output.squeeze()
             loss = loss_fn(output, labels)
             loss.backward()
             optimizer.step()
@@ -118,6 +150,7 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
 
         with torch.no_grad():
             output = net(examples)
+            output = output.squeeze()
             loss = loss_fn(output, labels)
             val_loss += loss.item() * examples.size(0)
 
@@ -130,10 +163,11 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
     return val_loss, val_metrics
 
 
-def cross_val(config):
+def cross_val(args, tuning=False):
     """
     Repeated K-Fold cross-validation for a PyTorch classifier
     """
+    config = create_config(args)
 
     net = config['net']
     dataset = config['dataset']
@@ -143,6 +177,13 @@ def cross_val(config):
     lr = config['lr']
     criterion = config['criterion']
     exp_name = config['exp_name']
+    optimizer = config['optim']
+
+    if tuning:
+        ID = '_'.join([str(args[key]) for key in args.keys()])
+        h = hash(ID)
+        h += sys.maxsize if h < 0 else 0
+        exp_name += '_' + str(h)
 
     # comet setup
     experiment = Experiment(
@@ -174,14 +215,17 @@ def cross_val(config):
 
         model = copy.deepcopy(net)
         model.to(device)
-        optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)
 
-        history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
+        history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': [], 'train_ranking': [],
+                   'val_ranking': []}
 
         for epoch in range(epochs):
-            train_loss, train_metrics = train_epoch(model, device, train_loader, criterion, classes, optimizer)
-            val_loss, val_metrics = val_epoch(model, device, val_loader, criterion, classes)
+            train_kwargs = {'n_train': len(train_sampler), 'epoch': epoch, 'epochs': epochs}
+            train_loss, train_metrics = train_epoch(net, device, train_loader, criterion, classes, optimizer,
+                                                    **train_kwargs)
+            val_loss, val_metrics = val_epoch(net, device, val_loader, criterion, classes)
 
             train_loss /= len(train_sampler)
             val_loss /= len(val_sampler)
@@ -191,17 +235,23 @@ def cross_val(config):
 
             mean_train_acc = np.mean(train_metrics['samples/f1'])
             mean_val_acc = np.mean(val_metrics['samples/f1'])
+            mean_train_ranking = np.mean(train_metrics['ranking'])
+            mean_val_ranking = np.mean(val_metrics['ranking'])
 
             scheduler.step(mean_val_acc)
 
             logging.info(
-                "Epoch:{}/{} \n"
-                " AVG Training Loss:{:.3f} \n"
-                "AVG Test Loss:{:.3f} \n"
-                "AVG Training Acc {:.2f} \n"
-                "AVG Test Acc {:.2f}".format(
+                "Epoch:{}/{} \n "
+                "AVG Training Ranking:{:.3f} \n"
+                "AVG Val Ranking:{:.3f} \n"
+                "AVG Training Loss:{:.3f} \n "
+                "AVG Val Loss:{:.3f} \n "
+                "AVG Training Acc {:.2f} \n "
+                "AVG Val Acc {:.2f}".format(
                     epoch + 1,
                     epochs,
+                    mean_train_ranking,
+                    mean_val_ranking,
                     train_loss,
                     val_loss,
                     mean_train_acc,
@@ -211,14 +261,24 @@ def cross_val(config):
             history['val_loss'].append(val_loss)
             history['train_acc'].append(mean_train_acc)
             history['val_acc'].append(mean_val_acc)
+            history['train_ranking'].append(mean_train_ranking)
+            history['val_ranking'].append(mean_val_ranking)
+
+            if tuning:
+                with tune.checkpoint_dir(epoch) as checkpoint_dir:
+                    path = join(checkpoint_dir, "checkpoint")
+                    torch.save((net.state_dict(), optimizer.state_dict()), path)
+
+                tune.report(loss=val_loss, accuracy=mean_val_acc, ranking=mean_val_ranking)
 
         foldperf['fold{}'.format(fold + 1)] = history
 
 
-def train(config):
+def train(args, tuning=False):
     """
     Standard iterative training for a PyTorch classifier
     """
+    config = create_config(args)
 
     net = config['net']
     dataset = config['dataset']
@@ -230,6 +290,13 @@ def train(config):
     frequency = config['frequency']
     criterion = config['criterion']
     exp_name = config['exp_name']
+    optimizer = config['optim']
+
+    if tuning:
+        ID = '_'.join([str(args[key]) for key in args.keys()])
+        h = hash(ID)
+        h += sys.maxsize if h < 0 else 0
+        exp_name += '_' + str(h)
 
     # comet setup
     experiment = Experiment(
@@ -271,8 +338,9 @@ def train(config):
 
     classes = dataset.classes
 
-    optimizer = torch.optim.Adam(net.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)
+
+    history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': [], 'train_ranking': [], 'val_ranking': []}
 
     for epoch in range(epochs):
         train_kwargs = {'n_train': n_train, 'epoch': epoch, 'epochs': epochs}
@@ -287,31 +355,48 @@ def train(config):
 
         mean_train_acc = np.mean(train_metrics['samples/f1'])
         mean_val_acc = np.mean(val_metrics['samples/f1'])
+        mean_train_ranking = np.mean(train_metrics['ranking'])
+        mean_val_ranking = np.mean(val_metrics['ranking'])
 
         scheduler.step(mean_val_acc)
 
         logging.info(
             "Epoch:{}/{} \n "
+            "AVG Training Ranking:{:.3f} \n"
+            "AVG Val Ranking:{:.3f} \n"
             "AVG Training Loss:{:.3f} \n "
             "AVG Val Loss:{:.3f} \n "
             "AVG Training Acc {:.2f} \n "
             "AVG Val Acc {:.2f}".format(
                 epoch + 1,
                 epochs,
+                mean_train_ranking,
+                mean_val_ranking,
                 train_loss,
                 val_loss,
                 mean_train_acc,
                 mean_val_acc))
 
-        # save checkpoint
-        if frequency and epoch % frequency == 0:
+        history['train_loss'].append(train_loss)
+        history['val_loss'].append(val_loss)
+        history['train_acc'].append(mean_train_acc)
+        history['val_acc'].append(mean_val_acc)
+        history['train_ranking'].append(mean_train_ranking)
+        history['val_ranking'].append(mean_val_ranking)
+
+        if tuning:
             with tune.checkpoint_dir(epoch) as checkpoint_dir:
                 path = join(checkpoint_dir, "checkpoint")
                 torch.save((net.state_dict(), optimizer.state_dict()), path)
-    #         util.makedir(save_dir)
-    #         torch.save(net.state_dict(),
-    #                   join(save_dir, f'{exp_name}_epoch{epoch + 1}.pth'))
-    #         logging.info(f'Checkpoint {epoch + 1} saved !')
+
+            tune.report(loss=val_loss, accuracy=mean_val_acc, ranking=mean_val_ranking)
+
+        # save checkpoint
+        if frequency and epoch % frequency == 0:
+            util.makedir(save_dir)
+            torch.save(net.state_dict(),
+                      join(save_dir, f'{exp_name}_epoch{epoch + 1}.pth'))
+            logging.info(f'Checkpoint {epoch + 1} saved !')
 
     # save final model
     util.makedir(save_dir)

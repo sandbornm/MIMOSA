@@ -1,29 +1,77 @@
 from functools import partial
-import numpy as np
-import os
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import random_split
-import torchvision
-import torchvision.transforms as transforms
+import argparse
+
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 
 from learn import train
 
+# architectures to search
+vision_archs = ['resnext_50', 'resnext_101',
+                'resnet_18', 'resnet_32', 'resnet_50', 'resnet_101', 'resnet_152',
+                'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large']
 
-def search(checkpoint_dir='cp', data_dir=None):
-    config = {
-        "l1": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
-        "l2": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Run a hyperparam search on a multilabel classifier')
+    parser.add_argument('--samples', 's', type=int, default=20, help='number of times to sample grid search params')
+    parser.add_argument('--epochs', '-e', type=int, default=100, help='max number of epochs that any trial can run')
+    parser.add_argument('--gpus', '-g', type=int, default=1, help='number of gpus per trial')
+
+    return parser.parse_args()
+
+
+# https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
+def search(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
+    args = {
+        'examples_dir': 'data/imgs',
+        'labels_csv': 'data/config_multilabel.csv',
+        'name': 'vhps',
+        'load': False,
+        'frequency': 0,
+        'mode': 'train',
+        'modality': 'image',
+        'arch': tune.grid_search(vision_archs),
+        'size': [tune.choice([64, 128, 256, 512, 1024, 2048, 4096]),
+                 tune.choice([64, 128, 256, 512, 1024, 2048, 4096])],
+        'epochs': tune.choice([10, 20, 50, 80, 100]),
+        "batchsize": tune.choice([2, 4, 8, 16, 32, 64]),
         "lr": tune.loguniform(5e-5, 1e-1),
-        "batch_size": tune.choice([2, 4, 8, 16])
+        'val': tune.quniform(0.01, 0.3, 0.01),
+        'pretrain': tune.choice([True, False]),
+        'variant': tune.choice(['dense', 'branch']),
+        'hidden': [512],
+        # 'hidden': [tune.choice([32, 64, 512, 1024, 2048]) for _ in range(tune.randint(1, 10))],
+        'optim': tune.choice(['adam', 'sgd', 'rmsprop']),
     }
-    return
+    scheduler = ASHAScheduler(
+        metric="ranking",
+        mode="min",
+        max_t=max_num_epochs,
+        grace_period=1,
+        reduction_factor=2)
+    reporter = CLIReporter(
+        # parameter_columns=["l1", "l2", "lr", "batch_size"],
+        metric_columns=["loss", "accuracy", 'ranking', "training_iteration"])
+    result = tune.run(
+        partial(train, tuning=True),
+        resources_per_trial={"cpu": 2, "gpu": gpus_per_trial},
+        config=args,
+        num_samples=num_samples,
+        scheduler=scheduler,
+        progress_reporter=reporter)
 
-if __name__ == '__main__':
+    best_trial = result.get_best_trial("loss", "min", "last")
+    print("Best trial config: {}".format(best_trial.config))
+    print("Best trial final validation loss: {}".format(
+        best_trial.last_result["loss"]))
+    print("Best trial final validation accuracy: {}".format(
+        best_trial.last_result["accuracy"]))
 
-    search(data_dir='data/imgs')
+
+if __name__ == "__main__":
+    args = get_args()
+
+    # You can change the number of GPUs per trial here:
+    search(num_samples=args.samples, max_num_epochs=args.epochs, gpus_per_trial=args.gpus)

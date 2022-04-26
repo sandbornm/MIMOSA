@@ -14,7 +14,7 @@ def get_parser():
     """
     Generic deep learning parser generator that can extensively add new arguments as needed
     """
-    parser = argparse.ArgumentParser(description='Train a Malware2Config mulitlabel classifier')
+    parser = argparse.ArgumentParser(description='Train a multilabel classifier')
 
     # metasetup
     parser.add_argument('--examples_dir', '-x', type=str, default="", help='path to image dir')
@@ -37,6 +37,7 @@ def get_parser():
     parser.add_argument('--pretrain', action='store_true', help='use pretrained vision models')
     parser.add_argument('--variant', '-va', type=str, default='dense', help='model variant [dense | branch]. default: dense')
     parser.add_argument('--hidden', '-hi', type=int, nargs='+', default=[512], help='dimensions for hidden dense layers. default: --hidden 512')
+    parser.add_argument('--optim', '-o', type=str, default='adam', help='optimizer to use [adam | sgd | rmsprop]. default: adam')
 
     return parser
 
