@@ -119,6 +119,7 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             labels = batch['label']
             labels = torch.squeeze(labels).float()
             examples, labels = examples.to(device), labels.to(device)
+
             optimizer.zero_grad()
             output = net(examples)
             output = output.squeeze()
@@ -285,6 +286,8 @@ def cross_val(args, tuning=False):
 
         foldperf['fold{}'.format(fold + 1)] = history
 
+    torch.cuda.empty_cache()
+
 
 def train(args, tuning=False):
     """
@@ -414,3 +417,5 @@ def train(args, tuning=False):
     torch.save(net.state_dict(),
                join(save_dir, f'{exp_name}_final.pth'))
     logging.info(f'Final model saved !')
+
+    torch.cuda.empty_cache()
