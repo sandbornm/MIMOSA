@@ -25,7 +25,7 @@ def get_args():
 
 # https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
 def search(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
-    print(os.getcwd())
+    print('CWD:', os.getcwd())
     args = {
         'examples_dir': './data/imgs',
         'labels_csv': './data/config_multilabel.csv',
