@@ -6,7 +6,7 @@
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --mem=12G
+#SBATCH --mem=32G
 #SBATCH --time=5-00:00:00
 #SBATCH --output=slurm/search-job.log
 
