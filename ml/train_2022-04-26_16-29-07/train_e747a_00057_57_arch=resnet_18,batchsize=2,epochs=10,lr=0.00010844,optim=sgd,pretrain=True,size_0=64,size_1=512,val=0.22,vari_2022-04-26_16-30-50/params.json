@@ -1,0 +1,25 @@
+{
+  "arch": "resnet_18",
+  "batchsize": 2,
+  "cp_dir": ".",
+  "epochs": 10,
+  "examples_dir": "data/imgs",
+  "frequency": 0,
+  "hidden": [
+    512
+  ],
+  "labels_csv": "data/config_multilabel.csv",
+  "load": false,
+  "lr": 0.0001084358519648194,
+  "modality": "image",
+  "mode": "train",
+  "name": "vhps",
+  "optim": "sgd",
+  "pretrain": true,
+  "size": [
+    64,
+    512
+  ],
+  "val": 0.22,
+  "variant": "branch"
+}

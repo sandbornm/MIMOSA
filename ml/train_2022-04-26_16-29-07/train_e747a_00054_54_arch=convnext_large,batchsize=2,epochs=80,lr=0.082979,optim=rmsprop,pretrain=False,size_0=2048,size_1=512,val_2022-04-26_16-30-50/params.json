@@ -1,0 +1,25 @@
+{
+  "arch": "convnext_large",
+  "batchsize": 2,
+  "cp_dir": ".",
+  "epochs": 80,
+  "examples_dir": "data/imgs",
+  "frequency": 0,
+  "hidden": [
+    512
+  ],
+  "labels_csv": "data/config_multilabel.csv",
+  "load": false,
+  "lr": 0.08297883659559518,
+  "modality": "image",
+  "mode": "train",
+  "name": "vhps",
+  "optim": "rmsprop",
+  "pretrain": false,
+  "size": [
+    2048,
+    512
+  ],
+  "val": 0.16,
+  "variant": "dense"
+}

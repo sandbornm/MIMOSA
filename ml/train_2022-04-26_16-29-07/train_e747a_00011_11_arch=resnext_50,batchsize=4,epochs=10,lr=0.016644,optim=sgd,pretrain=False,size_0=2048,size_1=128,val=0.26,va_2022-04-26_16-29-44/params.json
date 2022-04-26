@@ -1,0 +1,25 @@
+{
+  "arch": "resnext_50",
+  "batchsize": 4,
+  "cp_dir": ".",
+  "epochs": 10,
+  "examples_dir": "data/imgs",
+  "frequency": 0,
+  "hidden": [
+    512
+  ],
+  "labels_csv": "data/config_multilabel.csv",
+  "load": false,
+  "lr": 0.016643791369972905,
+  "modality": "image",
+  "mode": "train",
+  "name": "vhps",
+  "optim": "sgd",
+  "pretrain": false,
+  "size": [
+    2048,
+    128
+  ],
+  "val": 0.26,
+  "variant": "branch"
+}

@@ -1,0 +1,25 @@
+{
+  "arch": "resnet_152",
+  "batchsize": 32,
+  "cp_dir": ".",
+  "epochs": 100,
+  "examples_dir": "/Users/Zachary/Desktop/School/Vandy/Masters/M_Year1/Spring_2022/CS_8395_04/project/MIMOSA/ml/data/imgs",
+  "frequency": 0,
+  "hidden": [
+    512
+  ],
+  "labels_csv": "/Users/Zachary/Desktop/School/Vandy/Masters/M_Year1/Spring_2022/CS_8395_04/project/MIMOSA/ml/data/config_multilabel.csv",
+  "load": false,
+  "lr": 9.731215946511789e-05,
+  "modality": "image",
+  "mode": "train",
+  "name": "vhps",
+  "optim": "adam",
+  "pretrain": false,
+  "size": [
+    512,
+    64
+  ],
+  "val": 0.3,
+  "variant": "branch"
+}

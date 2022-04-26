@@ -1,0 +1,25 @@
+{
+  "arch": "resnet_101",
+  "batchsize": 8,
+  "cp_dir": ".",
+  "epochs": 10,
+  "examples_dir": "data/imgs",
+  "frequency": 0,
+  "hidden": [
+    512
+  ],
+  "labels_csv": "data/config_multilabel.csv",
+  "load": false,
+  "lr": 0.00014915572910992976,
+  "modality": "image",
+  "mode": "train",
+  "name": "vhps",
+  "optim": "rmsprop",
+  "pretrain": false,
+  "size": [
+    128,
+    512
+  ],
+  "val": 0.28,
+  "variant": "dense"
+}
