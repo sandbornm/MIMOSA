@@ -2,7 +2,6 @@
 ml/data/bins
 ml/data/imgs
 ml/cp
-*.slurm
 
 # Mac BS
 *.DS_Store
