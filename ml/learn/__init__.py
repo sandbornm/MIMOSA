@@ -125,9 +125,14 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             loss = loss_fn(output, labels)
             loss.backward()
             optimizer.step()
+
+            output = output.detach().cpu()
+            labels = labels.detach().cpu().numpy()
+            loss = loss.detach().cpu()
+
             train_loss += loss.item() * examples.size(0)
 
-            mtr = metrics.calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
+            mtr = metrics.calculate_metrics(output, labels.numpy())
             train_metrics = mtr if not train_metrics else metrics.merge_metrics(train_metrics, mtr)
 
             # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
@@ -152,9 +157,14 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
             output = net(examples)
             output = output.squeeze()
             loss = loss_fn(output, labels)
-            val_loss += loss.item() * examples.size(0)
 
-        mtr = metrics.calculate_metrics(output.detach().cpu(), labels.detach().cpu().numpy())
+        output = output.detach().cpu()
+        labels = labels.detach().cpu().numpy()
+        loss = loss.detach().cpu()
+
+        val_loss += loss.item() * examples.size(0)
+
+        mtr = metrics.calculate_metrics(output, labels)
         val_metrics = mtr if not val_metrics else metrics.merge_metrics(val_metrics, mtr)
 
         # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
