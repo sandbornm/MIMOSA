@@ -192,6 +192,7 @@ def cross_val(args, tuning=False):
         workspace="zstoebs",
     )
     experiment.set_name(exp_name)
+    experiment.add_tag(args['arch'])
 
     hyper_params = {
         "learning_rate": lr,
@@ -237,6 +238,11 @@ def cross_val(args, tuning=False):
             mean_val_acc = np.mean(val_metrics['samples/f1'])
             mean_train_ranking = np.mean(train_metrics['ranking'])
             mean_val_ranking = np.mean(val_metrics['ranking'])
+
+            if mean_val_ranking < 3:
+                experiment.add_tag('<3')
+            if mean_val_ranking < 2:
+                experiment.add_tag('<2')
 
             scheduler.step(mean_val_acc)
 
@@ -305,6 +311,7 @@ def train(args, tuning=False):
         workspace="zstoebs",
     )
     experiment.set_name(exp_name)
+    experiment.add_tag(args['arch'])
 
     save_dir = join('cp', exp_name)
 
@@ -357,6 +364,11 @@ def train(args, tuning=False):
         mean_val_acc = np.mean(val_metrics['samples/f1'])
         mean_train_ranking = np.mean(train_metrics['ranking'])
         mean_val_ranking = np.mean(val_metrics['ranking'])
+
+        if mean_val_ranking < 3:
+            experiment.add_tag('<3')
+        if mean_val_ranking < 2:
+            experiment.add_tag('<2')
 
         scheduler.step(mean_val_acc)
 
