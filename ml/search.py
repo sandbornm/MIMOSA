@@ -15,7 +15,7 @@ vision_archs = ['resnext_50', 'resnext_101',
 
 def get_args():
     parser = argparse.ArgumentParser(description='Run a hyperparam search on a multilabel classifier')
-    parser.add_argument('--samples', 's', type=int, default=20, help='number of times to sample grid search params')
+    parser.add_argument('--samples', '-s', type=int, default=20, help='number of times to sample grid search params')
     parser.add_argument('--epochs', '-e', type=int, default=100, help='max number of epochs that any trial can run')
     parser.add_argument('--gpus', '-g', type=int, default=1, help='number of gpus per trial')
 
