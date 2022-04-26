@@ -25,7 +25,6 @@ def get_args():
 
 # https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
 def search(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
-    print('CWD:', os.getcwd())
     args = {
         'examples_dir': './data/imgs',
         'labels_csv': './data/config_multilabel.csv',
@@ -74,6 +73,8 @@ def search(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
 
 if __name__ == "__main__":
     args = get_args()
+
+    print('CWD:', os.getcwd())
 
     # You can change the number of GPUs per trial here:
     search(num_samples=args.samples, max_num_epochs=args.epochs, gpus_per_trial=args.gpus)
