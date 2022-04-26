@@ -31,6 +31,7 @@ def search(examples_dir, labels_csv, cp_dir='~/ray/results', num_samples=10, max
     args = {
         'examples_dir': examples_dir,
         'labels_csv': labels_csv,
+        'cp_dir': cp_dir,
         'name': 'vhps',
         'load': False,
         'frequency': 0,
