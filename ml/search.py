@@ -19,15 +19,17 @@ def get_args():
     parser.add_argument('--samples', '-s', type=int, default=20, help='number of times to sample grid search params')
     parser.add_argument('--epochs', '-e', type=int, default=100, help='max number of epochs that any trial can run')
     parser.add_argument('--gpus', '-g', type=int, default=1, help='number of gpus per trial')
+    parser.add_argument('--examples_dir', '-x', type=str, default="", help='path to image dir')
+    parser.add_argument('--labels_csv', '-y', type=str, default="", help='path to labels csv')
 
     return parser.parse_args()
 
 
 # https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
-def search(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
+def search(examples_dir, labels_csv, num_samples=10, max_num_epochs=10, gpus_per_trial=2):
     args = {
-        'examples_dir': './data/imgs',
-        'labels_csv': './data/config_multilabel.csv',
+        'examples_dir': examples_dir,
+        'labels_csv': labels_csv,
         'name': 'vhps',
         'load': False,
         'frequency': 0,
@@ -74,7 +76,5 @@ def search(num_samples=10, max_num_epochs=10, gpus_per_trial=2):
 if __name__ == "__main__":
     args = get_args()
 
-    print('CWD:', os.getcwd())
-
     # You can change the number of GPUs per trial here:
-    search(num_samples=args.samples, max_num_epochs=args.epochs, gpus_per_trial=args.gpus)
+    search(args.examples_dir, args.labels_csv, num_samples=args.samples, max_num_epochs=args.epochs, gpus_per_trial=args.gpus)
