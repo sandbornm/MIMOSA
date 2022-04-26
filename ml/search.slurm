@@ -19,7 +19,7 @@
 #SBATCH --mail-user=zachary.a.stoebner@vanderbilt.edu
 #SBATCH --mail-type=ALL
 
-ml Anaconda3/2021.11
-conda activate MIMOSA-ML
+ml Anaconda3/5.0.1
+source activate MIMOSA-ML
 
 python3 search.py -g 2
