@@ -179,27 +179,23 @@ def cross_val(args, tuning=False):
     exp_name = config['exp_name']
     optimizer = config['optim']
 
-    if tuning:
-        ID = '_'.join([str(args[key]) for key in args.keys()])
-        h = hash(ID)
-        h += sys.maxsize if h < 0 else 0
-        exp_name += '_' + str(h)
-
     # comet setup
     experiment = Experiment(
         api_key="k86kE4n1wy7wQkkCmvZeFAV3M",
         project_name="mimosa",
         workspace="zstoebs",
     )
+    if tuning:
+        experiment.add_tag(exp_name)  # tag with initial tuning id
+        ID = '_'.join([str(args[key]) for key in args.keys()])
+        h = hash(ID)
+        h += sys.maxsize if h < 0 else 0
+        exp_name += '_' + str(h)
+
     experiment.set_name(exp_name)
     experiment.add_tag(args['arch'])
 
-    hyper_params = {
-        "learning_rate": lr,
-        "epochs": epochs,
-        "batch_size": batch_size,
-    }
-    experiment.log_parameters(hyper_params)
+    experiment.log_parameters(args)
 
     classes = dataset.classes
 
@@ -298,22 +294,25 @@ def train(args, tuning=False):
     exp_name = config['exp_name']
     optimizer = config['optim']
 
-    if tuning:
-        ID = '_'.join([str(args[key]) for key in args.keys()])
-        h = hash(ID)
-        h += sys.maxsize if h < 0 else 0
-        exp_name += '_' + str(h)
-
     # comet setup
     experiment = Experiment(
         api_key="k86kE4n1wy7wQkkCmvZeFAV3M",
         project_name="mimosa",
         workspace="zstoebs",
     )
+    if tuning:
+        experiment.add_tag(exp_name)  # tag with initial tuning id
+        ID = '_'.join([str(args[key]) for key in args.keys()])
+        h = hash(ID)
+        h += sys.maxsize if h < 0 else 0
+        exp_name += '_' + str(h)
+
     experiment.set_name(exp_name)
     experiment.add_tag(args['arch'])
+    experiment.log_parameters(args)
 
-    save_dir = join('cp', exp_name)
+    util.makedir(join(args['cp_dir'], 'cp'))
+    save_dir = join(args['cp_dir'], 'cp', exp_name)
 
     net.train()
 
@@ -323,16 +322,6 @@ def train(args, tuning=False):
     train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
     val_loader = DataLoader(val, batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True,
                             drop_last=True)
-
-    hyper_params = {
-        "learning_rate": lr,
-        "epochs": epochs,
-        "batch_size": batch_size,
-        "train_size": n_train,
-        "val_size": n_val,
-        "device": device.type,
-    }
-    experiment.log_parameters(hyper_params)
 
     logging.info(f'''Starting training:
         Epochs:          {epochs}
