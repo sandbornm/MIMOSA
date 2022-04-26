@@ -138,3 +138,6 @@ dmypy.json
 .pyre/
 
 .DS_Store
+.idea/
+*vtak.txt
+bp_analysis/scratch.py
