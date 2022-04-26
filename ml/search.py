@@ -13,9 +13,9 @@ from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 
 from learn import train
-from util import get_parser
 
-def search(checkpoint_dir=None, data_dir=None):
+
+def search(checkpoint_dir='cp', data_dir=None):
     config = {
         "l1": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
         "l2": tune.sample_from(lambda _: 2 ** np.random.randint(2, 9)),
@@ -25,7 +25,5 @@ def search(checkpoint_dir=None, data_dir=None):
     return
 
 if __name__ == '__main__':
-    parser = get_parser()
-    args = parser.parse_args()
-    
-    search()
+
+    search(data_dir='data/imgs')

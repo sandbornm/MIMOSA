@@ -34,7 +34,7 @@ def ranking_score(y_true, y_pred):
     for i, (ranking, target) in enumerate(zip(rankings, y_true)):
         score = 1
         for rank in ranking:
-            if y_true[rank]:
+            if target[rank]:
                 scores[i] = score
                 break
             score += 1
@@ -112,7 +112,7 @@ def calculate_metrics(pred, target, threshold=0.5):
             'micro/f1': [f1_score(y_true=target, y_pred=predt, average='micro', zero_division=1)],
             'macro/precision': [precision_score(y_true=target, y_pred=predt, average='macro', zero_division=1)],
             'macro/recall': [recall_score(y_true=target, y_pred=predt, average='macro', zero_division=1)],
-            'macro/f1': [f1_score(y_true=target, y_pred=pred, average='macro', zero_division=1)],
+            'macro/f1': [f1_score(y_true=target, y_pred=predt, average='macro', zero_division=1)],
             'samples/precision': [precision_score(y_true=target, y_pred=predt, average='samples', zero_division=1)],
             'samples/recall': [recall_score(y_true=target, y_pred=predt, average='samples', zero_division=1)],
             'samples/f1': [f1_score(y_true=target, y_pred=predt, average='samples', zero_division=1)],

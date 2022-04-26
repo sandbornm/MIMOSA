@@ -31,7 +31,7 @@ class FFBytesMultilabelClassifier(nn.Module):
         )
 
         if len(n_hidden) > 1:
-            for i, n in enumerate(n_hidden)[1:]:
+            for i, n in enumerate(n_hidden[1:], start=1):
                 self.base_model.append(nn.Linear(in_features=n_hidden[i-1], out_features=n_hidden[i]))
                 self.base_model.append(nn.ReLU())
 
@@ -77,17 +77,18 @@ class Conv1DBytesMultilabelClassifier(nn.Module):
         self.n_hidden = n_hidden
         self.variant = variant
 
-        self.block = nn.Sequential(
-            nn.Conv1d(1, n_hidden[0], 3, stride=2),
+        self.base_model = nn.Sequential(
+            nn.Conv1d(1, n_hidden[0], 16, stride=2),
             nn.BatchNorm1d(n_hidden[0]),
             nn.ReLU(),
-            nn.AdaptiveAvgPool1d(1),
-            nn.Linear(in_features=n_hidden[0], out_features=n_hidden[1]),
+            nn.AdaptiveAvgPool1d(n_hidden[0]),
+            nn.Flatten(),
+            nn.Linear(in_features=n_hidden[0]**2, out_features=n_hidden[1]),
             nn.ReLU()
         )
 
         if len(n_hidden) > 2:
-            for i, n in enumerate(n_hidden)[2:]:
+            for i, n in enumerate(n_hidden[2:], start=2):
                 self.base_model.append(nn.Linear(in_features=n_hidden[i-1], out_features=n_hidden[i]))
                 self.base_model.append(nn.ReLU())
 

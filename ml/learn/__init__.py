@@ -5,7 +5,9 @@ import numpy as np
 from tqdm import tqdm
 
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
+from torchsummary import summary
 
 from sklearn.model_selection import RepeatedKFold
 
@@ -20,8 +22,55 @@ from . import models
 from . import metrics
 
 
-def parse_config(config):
-    return
+def create_config(args):
+    """
+    Create a config from a dictionary of args
+    """
+
+    if args['modality'] == 'bytes':
+        args['size'] = np.prod(args['size'])
+
+    # create dataset
+    dataset = datasets.build_dataset(args)
+    n_examples = dataset.n_examples
+    n_classes = dataset.n_classes
+
+    # build net
+    net, criterion = models.build_model(args, n_classes)
+
+    device = torch.device("cpu")
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0")
+        if torch.cuda.device_count() > 1:
+            net = nn.DataParallel(net)
+
+    input_sz = dataset[0]['example'].shape
+    logging.info(f'Dataset: # of examples = {n_examples}, # of classes = {n_classes}, input size = {input_sz}')
+
+    summary(net, input_sz)
+    logging.info(f'Using device {device}')
+
+    # attempt load if spec'd
+    if args['load']:
+        net.load_state_dict(
+            torch.load(args['load'], map_location=device)
+        )
+        logging.info('net loaded from %s' % args['load'])
+
+    net.to(device=device)
+
+    config = {'net': net,
+              'dataset': dataset,
+              'device': device,
+              'epochs': args['epochs'],
+              'batch_size': args['batchsize'],
+              'lr': args['lr'],
+              'val_percent': args['val'],
+              'frequency': args['frequency'],
+              'criterion': criterion,
+              'exp_name': args['name'],
+              }
+    return config
 
 
 # https://medium.com/dataseries/k-fold-cross-validation-with-pytorch-and-sklearn-d094aa00105f

@@ -43,7 +43,7 @@ class MalwareBytesDataset(Dataset):
         else:
             bytes = np.hstack([bytes, np.zeros(self.sz - len(bytes), dtype)])
 
-        bytes = torch.from_numpy(bytes.astype(float)).float()
+        bytes = torch.from_numpy(bytes.astype(float)).float().unsqueeze(0)
 
         # get the label
         label = self.labels.loc[self.labels['sha1sum'] == hash]
