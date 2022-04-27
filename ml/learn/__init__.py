@@ -67,7 +67,16 @@ def create_config(args):
     input_sz = dataset[0]['example'].shape
     logging.info(f'Dataset: # of examples = {n_examples}, # of classes = {n_classes}, input size = {input_sz}')
 
-    summary(net, input_sz)
+    oom = False
+    try:
+        summary(net, input_sz)
+    except RuntimeError:
+        oom = True
+
+    if oom:
+        device = torch.device("cpu")
+        summary(net, input_sz)
+
     logging.info(f'Using device {device}')
 
     # attempt load if spec'd
