@@ -18,7 +18,7 @@ def degree_overfit(train_metrics, val_metrics):
     return diffs / len(train_metrics)
 
 
-def ranking_score(y_true, y_pred):
+def ranking_score(y_true, y_pred, predt):
     """
     Computes the ranking score i.e. how many choice along multilabel rank until a correct hit
 
@@ -29,15 +29,16 @@ def ranking_score(y_true, y_pred):
         mean_score = mean number of choices along ranking until a correct label hit
     """
     rankings = np.flip(np.argsort(y_pred, axis=1))  # sort descending
-    N, m = rankings.shape
+    N, m = y_true.shape
     scores = np.ones(N)*(m+1)
     for i, (ranking, target) in enumerate(zip(rankings, y_true)):
         score = 1
         for rank in ranking:
-            if target[rank]:
+            if target[rank] and predt[rank]:  # hit
                 scores[i] = score
                 break
-            score += 1
+            elif target[rank] and not predt[rank]:  # miss
+                score += 1
 
     mean_score = np.mean(scores)
     return mean_score
@@ -118,5 +119,5 @@ def calculate_metrics(pred, target, threshold=0.5):
             'samples/f1': [f1_score(y_true=target, y_pred=predt, average='samples', zero_division=1)],
             'accuracy': [accuracy_score(y_true=target, y_pred=predt)],
             'hamming': [hamming_loss(y_true=target, y_pred=predt)],
-            'ranking': [ranking_score(y_true=target, y_pred=pred.numpy())],
+            'ranking': [ranking_score(y_true=target, y_pred=pred.numpy(), predt=predt)],
             }
