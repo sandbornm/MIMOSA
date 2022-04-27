@@ -61,8 +61,6 @@ def create_config(args):
     device = torch.device("cpu")
     if torch.cuda.is_available():
         device = torch.device("cuda")
-        if torch.cuda.device_count() > 1:
-            net = nn.DataParallel(net)
 
     input_sz = dataset[0]['example'].shape
     logging.info(f'Dataset: # of examples = {n_examples}, # of classes = {n_classes}, input size = {input_sz}')
@@ -76,6 +74,8 @@ def create_config(args):
     if oom:
         device = torch.device("cpu")
         summary(net, input_sz, device=device)
+    elif torch.cuda.device_count() > 1:
+        net = nn.DataParallel(net)
 
     logging.info(f'Using device {device}')
 
