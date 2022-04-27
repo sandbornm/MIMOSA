@@ -29,15 +29,14 @@ def ranking_score(y_true, y_pred, predt):
         mean_score = mean number of choices along ranking until a correct label hit
     """
     rankings = np.flip(np.argsort(y_pred, axis=1))  # sort descending
-    N, m = y_true.shape
-    scores = np.ones(N)*(m+1)
-    for i, (ranking, target) in enumerate(zip(rankings, y_true)):
+    scores = np.sum(y_true, axis=1)+1
+    for i, (ranking, target, pred) in enumerate(zip(rankings, y_true, predt)):
         score = 1
         for rank in ranking:
-            if target[rank] and predt[rank]:  # hit
+            if target[rank] and pred[rank]:  # hit
                 scores[i] = score
                 break
-            elif target[rank] and not predt[rank]:  # miss
+            elif target[rank] and not pred[rank]:  # miss
                 score += 1
 
     mean_score = np.mean(scores)
