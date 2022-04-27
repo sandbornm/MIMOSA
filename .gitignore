@@ -137,6 +137,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+
+# bp_analysis extension
 .DS_Store
 .idea/
 *vtak.txt
