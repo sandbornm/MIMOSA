@@ -2,6 +2,8 @@ import os
 from functools import partial
 import argparse
 
+import torch
+
 from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
@@ -28,6 +30,8 @@ def get_args():
 
 # https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html
 def search(examples_dir, labels_csv, cp_dir='~/ray/results', num_samples=10, max_num_epochs=10, gpus_per_trial=2):
+    torch.cuda.empty_cache()
+
     args = {
         'examples_dir': examples_dir,
         'labels_csv': labels_csv,
