@@ -66,7 +66,22 @@ class BehaviorReportParser:
             sample_desc.append((sample, num_keys, num_values))
         return sample_desc
 
+    def active_behavior_by_keys(self, keys):
+        assert isinstance(keys, list)
+
+        # keep count of # samples
+        active_behavior = {k: 0 for k in keys}
+        for sample, report in tqdm(self.all_data.items()):
+            for key in report.keys():
+                if key in keys:
+                    active_behavior[key] += 1
+        return active_behavior
+
+        
+
+
 
 if __name__ == "__main__":
     report_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "bp_reports")
-    BehaviorReportParser(report_dir).report_summary()
+    
+    BehaviorReportParser(report_dir).active_behavior_by_keys(behavior_keys)
