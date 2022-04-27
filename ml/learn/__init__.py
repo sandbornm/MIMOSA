@@ -60,7 +60,7 @@ def create_config(args):
 
     device = torch.device("cpu")
     if torch.cuda.is_available():
-        device = torch.device("cuda:0")
+        device = torch.device("cuda")
         if torch.cuda.device_count() > 1:
             net = nn.DataParallel(net)
 
