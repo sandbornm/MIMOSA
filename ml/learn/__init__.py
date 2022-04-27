@@ -75,7 +75,7 @@ def create_config(args):
 
     if oom:
         device = torch.device("cpu")
-        summary(net, input_sz)
+        summary(net, input_sz, device=device)
 
     logging.info(f'Using device {device}')
 
