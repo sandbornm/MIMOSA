@@ -144,7 +144,7 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
 
             train_loss += loss.item() * examples.size(0)
 
-            mtr = metrics.calculate_metrics(output, labels.numpy())
+            mtr = metrics.calculate_metrics(output, labels)
             train_metrics = mtr if not train_metrics else metrics.merge_metrics(train_metrics, mtr)
 
             # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
