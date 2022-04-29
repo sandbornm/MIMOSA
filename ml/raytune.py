@@ -10,9 +10,10 @@ from ray.tune.schedulers import ASHAScheduler
 from learn import train
 
 # architectures to search
-vision_archs = ['resnext_50', 'resnext_101',
-                'resnet_18', 'resnet_32', 'resnet_50', 'resnet_101', 'resnet_152',
-                'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large']
+vision_archs = ['resnext_50',  # 'resnext_101',
+                'resnet_18', 'resnet_32', 'resnet_50',  # 'resnet_101', 'resnet_152',
+                'convnext_tiny', 'convnext_small', 'convnext_base', # 'convnext_large'
+                ]
 
 
 def get_args():
@@ -41,10 +42,10 @@ def search(examples_dir, labels_csv, cp_dir='~/ray/results', num_samples=10, max
         'mode': 'train',
         'modality': 'image',
         'arch': tune.grid_search(vision_archs),
-        'size': [tune.choice([64, 128, 256, 512, 1024, 2048, 4096]),
-                 tune.choice([64, 128, 256, 512, 1024, 2048, 4096])],
+        'size': [tune.choice([64, 128, 256, 512]),
+                 tune.choice([64, 128, 256, 512])],
         'epochs': tune.choice([10, 20, 50, 80, 100]),
-        "batchsize": tune.choice([2, 4, 8, 16, 32, 64]),
+        "batchsize": tune.choice([2, 4, 8, 16]),
         "lr": tune.loguniform(5e-5, 1e-1),
         'val': tune.quniform(0.01, 0.3, 0.01),
         'pretrain': tune.choice([True, False]),
@@ -64,7 +65,7 @@ def search(examples_dir, labels_csv, cp_dir='~/ray/results', num_samples=10, max
         metric_columns=["loss", "accuracy", 'ranking', "training_iteration"])
     result = tune.run(
         partial(train, tuning=True),
-        resources_per_trial={"cpu": 2, "gpu": gpus_per_trial},
+        resources_per_trial={"cpu": 1, "gpu": gpus_per_trial},
         config=args,
         num_samples=num_samples,
         scheduler=scheduler,

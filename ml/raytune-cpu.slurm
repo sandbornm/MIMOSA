@@ -7,7 +7,7 @@
 #SBATCH --mem=128G
 
 #SBATCH --time=5-00:00:00
-#SBATCH --output=slurm/search-cpu.log
+#SBATCH --output=slurm/raytune-cpu.log
 #SBATCH --job-name=mimosa_search
 
 # Communication
@@ -20,4 +20,4 @@ source activate MIMOSA-ML
 X=/scratch/stoebnza/MIMOSA/ml/data/imgs
 Y=/scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv
 
-python3 Search.py -x $X -y $Y  -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 0
+python3 raytune.py -x $X -y $Y  -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 0
