@@ -134,8 +134,6 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             oom = False
             try:
                 examples, labels, net = examples.to(device), labels.to(device), net.to(device)
-                if torch.cuda.is_available() and torch.cuda.device_count() > 1:
-                    net = nn.DataParallel(net)
 
                 output = net(examples)
             except RuntimeError:
