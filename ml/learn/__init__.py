@@ -132,7 +132,17 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             examples, labels = examples.to(device), labels.to(device)
 
             optimizer.zero_grad()
-            output = net(examples)
+            oom = False
+            try:
+                output = net(examples)
+            except RuntimeError:
+                oom = True
+                torch.cuda.empty_cache()
+
+            if oom:
+                examples, labels, net = examples.cpu(), labels.cpu(), net.cpu()
+                output = net(examples)
+
             output = output.squeeze()
             loss = loss_fn(output, labels)
             loss.backward()
@@ -166,7 +176,17 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
         examples, labels = examples.to(device), labels.to(device)
 
         with torch.no_grad():
-            output = net(examples)
+            oom = False
+            try:
+                output = net(examples)
+            except RuntimeError:
+                oom = True
+                torch.cuda.empty_cache()
+
+            if oom:
+                examples, labels, net = examples.cpu(), labels.cpu(), net.cpu()
+                output = net(examples)
+
             output = output.squeeze()
             loss = loss_fn(output, labels)
 
