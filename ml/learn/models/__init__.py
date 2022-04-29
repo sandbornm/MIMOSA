@@ -16,7 +16,6 @@ def build_model(args, n_classes):
             net = ImageModels.ConvNeXtMultilabelClassifier(arch.lower(), n_classes, pretrained=pretrain, variant=variant)
         else:
             raise ValueError('Unknown architecture: ', args['arch'])
-        criterion = ImageModels.criterion
     elif modality.lower() == 'bytes':
         if 'conv' in arch.lower():
             net = BytesModels.Conv1DBytesMultilabelClassifier(arch.lower(), n_classes, n_hidden=args['hidden'], variant=variant)
@@ -24,8 +23,7 @@ def build_model(args, n_classes):
             net = BytesModels.FFBytesMultilabelClassifier(arch.lower(), args['size'], n_classes, n_hidden=args['hidden'], variant=variant)
         else:
             raise ValueError('Unknown architecture: ', args['arch'])
-        criterion = BytesModels.criterion
     else:
         raise ValueError('Unknown modality: ', args['modality'])
 
-    return net, criterion
+    return net

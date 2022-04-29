@@ -53,6 +53,7 @@ def search(examples_dir, labels_csv, cp_dir='~/ray/results', num_samples=10, max
         'hidden': [512],
         # 'hidden': [tune.choice([32, 64, 512, 1024, 2048]) for _ in range(tune.randint(1, 10))],
         'optim': tune.choice(['adam', 'sgd', 'rmsprop']),
+        'loss': 'bce',
     }
     scheduler = ASHAScheduler(
         metric="ranking",

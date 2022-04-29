@@ -44,6 +44,7 @@ def create_config(args):
     variant = args['variant']
     hidden = args['hidden']
     optim = args['optim']
+    loss = args['loss']
 
 
     if 'bytes' in modality.lower():
@@ -56,7 +57,14 @@ def create_config(args):
     n_classes = dataset.n_classes
 
     # build net
-    net, criterion = models.build_model(args, n_classes)
+    net = models.build_model(args, n_classes)
+
+    if loss.lower() == 'bce':
+        criterion = nn.BCELoss()
+    elif loss.lower() == 'cce':
+        criterion = nn.CrossEntropyLoss()
+    else:
+        raise ValueError('Unknown loss function: ', loss)
 
     device = torch.device("cpu")
     if torch.cuda.is_available():

@@ -39,6 +39,8 @@ def get_parser():
     parser.add_argument('--variant', '-va', type=str, default='dense', help='model variant [dense | branch]. default: dense')
     parser.add_argument('--hidden', '-hi', type=int, nargs='+', default=[512], help='dimensions for hidden dense layers. default: --hidden 512')
     parser.add_argument('--optim', '-o', type=str, default='adam', help='optimizer to use [adam | sgd | rmsprop]. default: adam')
+    parser.add_argument('--loss', '-l', type=str, default='bce', help='loss fnc to use [bce | cce]. default: bce')
+
 
     return parser
 
