@@ -133,8 +133,7 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             optimizer.zero_grad()
             oom = False
             try:
-                examples, labels, net = examples.to(device), labels.to(device), net.to(device)
-
+                examples, labels, net = examples.cuda(non_blocking=True), labels.cuda(non_blocking=True), net.cuda(non_blocking=True)
                 output = net(examples)
             except RuntimeError:
                 oom = True
@@ -178,10 +177,7 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
         with torch.no_grad():
             oom = False
             try:
-                examples, labels, net = examples.to(device), labels.to(device), net.to(device)
-                if torch.cuda.is_available() and torch.cuda.device_count() > 1:
-                    net = nn.DataParallel(net)
-
+                examples, labels, net = examples.cuda(non_blocking=True), labels.cuda(non_blocking=True), net.cuda(non_blocking=True)
                 output = net(examples)
             except RuntimeError:
                 oom = True
