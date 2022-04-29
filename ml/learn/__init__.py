@@ -74,8 +74,7 @@ def create_config(args):
         torch.cuda.empty_cache()
 
     if oom:
-        device = torch.device("cpu")
-        summary(net, input_sz, device=device)
+        summary(net.cpu(), input_sz, device=device)
     elif torch.cuda.device_count() > 1:
         net = nn.DataParallel(net)
 
@@ -129,11 +128,14 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             examples = batch['example']
             labels = batch['label']
             labels = torch.squeeze(labels).float()
-            examples, labels = examples.to(device), labels.to(device)
 
             optimizer.zero_grad()
             oom = False
             try:
+                examples, labels, net = examples.to(device), labels.to(device), net.to(device)
+                if torch.cuda.is_available() and torch.cuda.device_count() > 1:
+                    net = nn.DataParallel(net)
+
                 output = net(examples)
             except RuntimeError:
                 oom = True
@@ -173,11 +175,14 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
         examples = batch['example']
         labels = batch['label']
         labels = torch.squeeze(labels).float()
-        examples, labels = examples.to(device), labels.to(device)
 
         with torch.no_grad():
             oom = False
             try:
+                examples, labels, net = examples.to(device), labels.to(device), net.to(device)
+                if torch.cuda.is_available() and torch.cuda.device_count() > 1:
+                    net = nn.DataParallel(net)
+
                 output = net(examples)
             except RuntimeError:
                 oom = True
