@@ -156,10 +156,10 @@ def train_epoch(net, device, dataloader, loss_fn, optimizer, classes=None, **kwa
 
             if classes:
                 mtr = metrics.report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
-                val_metrics = mtr if not val_metrics else metrics.merge_reports(val_metrics, mtr)
+                train_metrics = mtr if not train_metrics else metrics.merge_reports(train_metrics, mtr)
             else:
                 mtr = metrics.calculate_metrics(output, labels)
-                val_metrics = mtr if not val_metrics else metrics.merge_metrics(val_metrics, mtr)
+                train_metrics = mtr if not train_metrics else metrics.merge_metrics(train_metrics, mtr)
 
             pbar.update(examples.shape[0])
 
