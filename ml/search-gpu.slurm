@@ -2,11 +2,10 @@
 
 #SBATCH --account=h_oguz_lab_acc
 #SBATCH --partition=pascal
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
 #SBATCH --mem=32G
 
 #SBATCH --time=5-00:00:00
