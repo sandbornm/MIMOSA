@@ -4,4 +4,4 @@
 X=/home/michael2/MIMOSA/ml/data/imgs
 Y=/home/michael2/MIMOSA/ml/data/config_multilabel.csv
 
-python3 search.py -x $X  -y $Y -g 2
+python3 Search.py -x $X  -y $Y -g 2

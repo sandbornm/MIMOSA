@@ -20,4 +20,4 @@ source activate MIMOSA-ML
 X=/scratch/stoebnza/MIMOSA/ml/data/imgs
 Y=/scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv
 
-python3 search.py -x $X -y $Y  -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 0
+python3 Search.py -x $X -y $Y  -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 0

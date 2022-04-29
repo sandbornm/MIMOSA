@@ -20,4 +20,4 @@
 ml Anaconda3/5.0.1
 source activate MIMOSA-ML
 
-python3 search.py -x /scratch/stoebnza/MIMOSA/ml/data/imgs  -y /scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv  -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 2
+python3 Search.py -x /scratch/stoebnza/MIMOSA/ml/data/imgs  -y /scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv  -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 2
