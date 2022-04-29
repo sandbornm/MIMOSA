@@ -74,7 +74,8 @@ def create_config(args):
         torch.cuda.empty_cache()
 
     if oom:
-        summary(net, input_sz, device=torch.device('cpu'))
+        device = torch.device('cpu')
+        summary(net, input_sz, device=device)
     elif torch.cuda.device_count() > 1:
         net = nn.DataParallel(net)
 
