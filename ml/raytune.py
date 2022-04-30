@@ -10,9 +10,9 @@ from ray.tune.schedulers import ASHAScheduler
 from learn import train
 
 # architectures to search
-vision_archs = ['resnext_50',  # 'resnext_101',
-                'resnet_18', 'resnet_32', 'resnet_50',  # 'resnet_101', 'resnet_152',
-                'convnext_tiny', 'convnext_small', 'convnext_base', # 'convnext_large'
+vision_archs = ['resnext_50',  'resnext_101',
+                'resnet_18', 'resnet_32', 'resnet_50',  'resnet_101', 'resnet_152',
+                'convnext_tiny', 'convnext_small', 'convnext_base', 'convnext_large'
                 ]
 
 
