@@ -18,29 +18,25 @@ def degree_overfit(train_metrics, val_metrics):
     return diffs / len(train_metrics)
 
 
-def ranking_score(y_true, y_pred, predt):
+def hit_rate(y_true, y_pred):
     """
-    Computes the ranking score i.e. how many choice along multilabel rank until a correct hit
+    Computes the hit rate i.e. how many samples are classified to the correct
 
     Parameters:
-        y_true = one-hot multilabel ground truth (N, m)
-        y_pred = probabilities of belonging to each class (N, m)
+        y_true = one-hot multilabel ground truths (N, m)
+        y_pred = one-hot class belonging predictions (N, m)
     Returns:
-        mean_score = mean number of choices along ranking until a correct label hit
+        hit rate = hits / # of samples
     """
-    rankings = np.flip(np.argsort(y_pred, axis=1))  # sort descending
-    scores = np.sum(y_true, axis=1)+1
-    for i, (ranking, target, pred) in enumerate(zip(rankings, y_true, predt)):
-        score = 1
-        for rank in ranking:
-            if target[rank] and pred[rank]:  # hit
-                scores[i] = score
-                break
-            elif target[rank] and not pred[rank]:  # miss
-                score += 1
+    hits = 0
+    for true, pred in zip(y_true, y_pred):
+        # if a single true at positive index passed threshold, then it's a hit
+        # o/w total miss
+        # if there are no positive labels, then automatic hit regardless of classification
+        if not true.any() or pred[true.astype(bool)].any():
+            hits += 1
 
-    mean_score = np.mean(scores)
-    return mean_score
+    return hits / len(y_true)
 
 
 def log_metrics(experiment, train_metrics, val_metrics, train_loss, val_loss, epoch):
@@ -118,5 +114,5 @@ def calculate_metrics(pred, target, threshold=0.5):
             'samples/f1': [f1_score(y_true=target, y_pred=predt, average='samples', zero_division=1)],
             'accuracy': [accuracy_score(y_true=target, y_pred=predt)],
             'hamming': [hamming_loss(y_true=target, y_pred=predt)],
-            'ranking': [ranking_score(y_true=target, y_pred=pred.numpy(), predt=predt)],
+            'ranking': [hit_rate(y_true=target, y_pred=predt)],
             }

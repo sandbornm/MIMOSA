@@ -44,6 +44,7 @@ def create_config(args):
     variant = args['variant']
     hidden = args['hidden']
     optim = args['optim']
+    loss = args['loss']
 
 
     if 'bytes' in modality.lower():
@@ -56,7 +57,14 @@ def create_config(args):
     n_classes = dataset.n_classes
 
     # build net
-    net, criterion = models.build_model(args, n_classes)
+    net = models.build_model(args, n_classes)
+
+    if loss.lower() == 'bce':
+        criterion = nn.BCELoss()
+    elif loss.lower() == 'cce':
+        criterion = nn.CrossEntropyLoss()
+    else:
+        raise ValueError('Unknown loss function: ', loss)
 
     device = torch.device("cpu")
     if torch.cuda.is_available():
@@ -116,7 +124,7 @@ def create_config(args):
 
 
 # https://medium.com/dataseries/k-fold-cross-validation-with-pytorch-and-sklearn-d094aa00105f
-def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
+def train_epoch(net, device, dataloader, loss_fn, optimizer, classes=None, **kwargs):
     n_train = kwargs['n_train']
     epoch = kwargs['epoch']
     epochs = kwargs['epochs']
@@ -134,9 +142,6 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
             oom = False
             try:
                 examples, labels, net = examples.to(device), labels.to(device), net.to(device)
-                if torch.cuda.is_available() and torch.cuda.device_count() > 1:
-                    net = nn.DataParallel(net)
-
                 output = net(examples)
             except RuntimeError:
                 oom = True
@@ -157,18 +162,19 @@ def train_epoch(net, device, dataloader, loss_fn, classes, optimizer, **kwargs):
 
             train_loss += loss.item() * examples.size(0)
 
-            mtr = metrics.calculate_metrics(output, labels)
-            train_metrics = mtr if not train_metrics else metrics.merge_metrics(train_metrics, mtr)
-
-            # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
-            # train_metrics = metrics if not train_metrics else merge_reports(train_metrics, metrics)
+            if classes:
+                mtr = metrics.report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
+                train_metrics = mtr if not train_metrics else metrics.merge_reports(train_metrics, mtr)
+            else:
+                mtr = metrics.calculate_metrics(output, labels)
+                train_metrics = mtr if not train_metrics else metrics.merge_metrics(train_metrics, mtr)
 
             pbar.update(examples.shape[0])
 
     return train_loss, train_metrics
 
 
-def val_epoch(net, device, dataloader, loss_fn, classes):
+def val_epoch(net, device, dataloader, loss_fn, classes=None):
     val_loss = 0.0
     val_metrics = None
     net.eval()
@@ -181,9 +187,6 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
             oom = False
             try:
                 examples, labels, net = examples.to(device), labels.to(device), net.to(device)
-                if torch.cuda.is_available() and torch.cuda.device_count() > 1:
-                    net = nn.DataParallel(net)
-
                 output = net(examples)
             except RuntimeError:
                 oom = True
@@ -202,11 +205,12 @@ def val_epoch(net, device, dataloader, loss_fn, classes):
 
         val_loss += loss.item() * examples.size(0)
 
-        mtr = metrics.calculate_metrics(output, labels)
-        val_metrics = mtr if not val_metrics else metrics.merge_metrics(val_metrics, mtr)
-
-        # metrics = report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
-        # val_metrics = metrics if not val_metrics else merge_reports(val_metrics, metrics)
+        if classes:
+            mtr = metrics.report(output.detach().cpu(), labels.detach().cpu().numpy(), classes)
+            val_metrics = mtr if not val_metrics else metrics.merge_reports(val_metrics, mtr)
+        else:
+            mtr = metrics.calculate_metrics(output, labels)
+            val_metrics = mtr if not val_metrics else metrics.merge_metrics(val_metrics, mtr)
 
     return val_loss, val_metrics
 
@@ -268,9 +272,9 @@ def cross_val(args, tuning=False):
 
         for epoch in range(epochs):
             train_kwargs = {'n_train': len(train_sampler), 'epoch': epoch, 'epochs': epochs}
-            train_loss, train_metrics = train_epoch(net, device, train_loader, criterion, classes, optimizer,
+            train_loss, train_metrics = train_epoch(net, device, train_loader, criterion, optimizer,
                                                     **train_kwargs)
-            val_loss, val_metrics = val_epoch(net, device, val_loader, criterion, classes)
+            val_loss, val_metrics = val_epoch(net, device, val_loader, criterion)
 
             train_loss /= len(train_sampler)
             val_loss /= len(val_sampler)
@@ -390,8 +394,8 @@ def train(args, tuning=False):
 
     for epoch in range(epochs):
         train_kwargs = {'n_train': n_train, 'epoch': epoch, 'epochs': epochs}
-        train_loss, train_metrics = train_epoch(net, device, train_loader, criterion, classes, optimizer, **train_kwargs)
-        val_loss, val_metrics = val_epoch(net, device, val_loader, criterion, classes)
+        train_loss, train_metrics = train_epoch(net, device, train_loader, criterion, optimizer, **train_kwargs)
+        val_loss, val_metrics = val_epoch(net, device, val_loader, criterion)
 
         train_loss /= n_train
         val_loss /= n_val
