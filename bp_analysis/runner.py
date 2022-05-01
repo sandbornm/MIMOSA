@@ -20,45 +20,6 @@ import json
 logging.basicConfig(filename='runner.log', level=logging.DEBUG)
 
 
-
-""" view memory dumps from the vbox vm """
-class MemReader:
-    def __init__(self, artifacts_dir, sample_id, elf_file):
-        assert os.path.exists(os.path.join(artifacts_dir, sample_id, elf_file))
-        assert elf_file[-3:] == "elf"
-
-        self.logger = logging.getLogger(__name__)
-
-        self.artifacts_dir = artifacts_dir
-        self.sample_id = sample_id
-        self.elf_path = os.path.join(artifacts_dir, sample_id, elf_file)
-
-        self.profile = "Win7SP1x86_23418"  # Win7SP0x86 was not working
-
-        print("done init")
-
-    def imagecopy(self):
-        self.imcopy_raw = self.elf_path[:-4]+"_imcopy.raw"
-        self.logger.info(f"running imagecopy with volatility to convert vbox mem dump {self.elf_path} to raw image {self.imcopy_raw}")
-        subprocess.run(["python2", os.path.join(os.path.expanduser('~'), "volatility", "vol.py"), "-f", self.elf_path,
-                          f"--profile={self.profile}", "imagecopy", "-O", self.imcopy_raw], stdout=subprocess.PIPE)
-        print(f"ran imagecopy on {self.elf_path} and wrote {self.imcopy_raw}")
-
-    def vboxinfo(self):
-        self.logger.info(f"running vboxinfo with volatility to get details of [{self.elf_path}] vbox core dump")
-        res = subprocess.run(["python2", os.path.join(os.path.expanduser('~'), "volatility", "vol.py"), "-f", self.elf_path,
-                          f"--profile={self.profile}", "vboxinfo"], stdout=subprocess.PIPE)
-
-        def write(fname):
-            with open(os.path.join(self.artifacts_dir, self.sample_id, fname), 'wb') as f:
-                f.write(res.stdout)
-
-        write(self.sample_id + "_vboxinfo")
-        print(f"ran vboxinfo on {self.elf_path} and wrote result to {self.sample_id}_vboxinfo")
-
-
-
-
 """ run BluePill samples on specified backends (vbox to start) using (1 for now) original MIMOSA configurations
 
     sample_dir: folder containing the samples to study (dir)
@@ -264,8 +225,3 @@ if __name__ == "__main__":
     r.clear_vm_params()  # precautionary; UUID Error thrown with extraConfig strings set
     run_list = r.run()  # try to run 2 samples
 
-
-    # memory analysis after trying to run samples
-    # mr = MemReader(artifacts_dir, "acdb3a93", "acdb3a93_dump.elf")
-    # mr.imagecopy()
-    # mr.vboxinfo()

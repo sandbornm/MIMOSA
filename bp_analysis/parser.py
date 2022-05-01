@@ -17,10 +17,10 @@ from tqdm import tqdm
 class BehaviorReportParser:
 
     # CPU, HCI, Process, Storage, Network
-    def __init__(self, report_dir):
-        assert os.path.isdir(report_dir), "report_dir is not a directory!"
-        self.report_dir = report_dir
-        self.reports = [os.path.join(report_dir, x) for x in os.listdir(report_dir)]
+    def __init__(self):
+        self.report_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "bp_reports")
+        assert os.path.isdir(self.report_dir), "report_dir is not a directory!"
+        self.reports = [os.path.join(self.report_dir, x) for x in os.listdir(self.report_dir)]
         self.num_reports = len(self.reports)
 
         """
@@ -77,10 +77,8 @@ class BehaviorReportParser:
                     active_behavior[key] += 1
         return active_behavior
 
-
-
-
-if __name__ == "__main__":
-    report_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "bp_reports")
-    
-   # BehaviorReportParser(report_dir).active_behavior_by_keys(behavior_keys)
+    # pull info from a single report given a sample_id e.g. from memread or runner
+    def get_report(self, sample_id):
+        for k in self.all_data.keys():
+            if sample_id == k[:len(sample_id)]:
+                return self.all_data[k]
