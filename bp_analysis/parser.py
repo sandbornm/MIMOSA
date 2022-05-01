@@ -77,11 +77,10 @@ class BehaviorReportParser:
                     active_behavior[key] += 1
         return active_behavior
 
-        
 
 
 
 if __name__ == "__main__":
     report_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "bp_reports")
     
-    BehaviorReportParser(report_dir).active_behavior_by_keys(behavior_keys)
+   # BehaviorReportParser(report_dir).active_behavior_by_keys(behavior_keys)
