@@ -19,8 +19,4 @@
 ml Anaconda3/5.0.1
 source activate MIMOSA-ML
 
-<<<<<<< HEAD:ml/search-gpu.slurm
-python3 Search.py -x /scratch/stoebnza/MIMOSA/ml/data/imgs  -y /scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv  -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 1
-=======
-python3 raytune.py -x /scratch/stoebnza/MIMOSA/ml/data/imgs  -y /scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv  -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 2
->>>>>>> be6fec57e71572cf49ccfc8e98a2fc641df81c63:ml/raytune-gpu.slurm
+python3 raytune.py -x /scratch/stoebnza/MIMOSA/ml/data/imgs -y /scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv -c /data/h_oguz_lab/stoebnza/MIMOSA/ray_results -g 2

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#SBATCH --account=h_oguz_lab_acc
+#SBATCH --partition=pascal
+#SBATCH --gres=gpu:1
+
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --mem=32G
+
+#SBATCH --time=0-05:00:00
+#SBATCH --output=slurm/m2c-gpu.log
+#SBATCH --job-name=mimosa_m2c
+
+# Communication
+#SBATCH --mail-user=zachary.a.stoebner@vanderbilt.edu
+#SBATCH --mail-type=ALL
+
+ml Anaconda3/5.0.1
+source activate MIMOSA-ML
+
+X=/scratch/stoebnza/MIMOSA/ml/data/imgs
+Y=/scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv
+N=M2C_resnext101_top0
+I=image
+A=resnext_101
+B=16
+E=50
+L=7e-5
+O=sgd
+S1=256
+S2=512
+V=0.24
+VA=branch
+python3 Malware2Config.py -x $X -y $Y -n $N -i $I -a $A -b $B -e $E -l $L -o $O -s $S1 $S2 -v $V -va $VA --pretrain
