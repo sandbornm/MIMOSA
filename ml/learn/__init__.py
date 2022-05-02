@@ -287,10 +287,10 @@ def cross_val(args, tuning=False):
             mean_train_ranking = np.mean(train_metrics['ranking'])
             mean_val_ranking = np.mean(val_metrics['ranking'])
 
-            if mean_val_ranking < 3:
-                experiment.add_tag('<3')
-            if mean_val_ranking < 2:
-                experiment.add_tag('<2')
+            if mean_val_ranking > 0.9:
+                experiment.add_tag('>0.9')
+            if mean_val_ranking > 0.95:
+                experiment.add_tag('>0.95')
 
             scheduler.step(mean_val_acc)
 
@@ -408,10 +408,10 @@ def train(args, tuning=False):
         mean_train_ranking = np.mean(train_metrics['ranking'])
         mean_val_ranking = np.mean(val_metrics['ranking'])
 
-        if mean_val_ranking < 3:
-            experiment.add_tag('<3')
-        if mean_val_ranking < 2:
-            experiment.add_tag('<2')
+        if mean_val_ranking > 0.9:
+            experiment.add_tag('>0.9')
+        if mean_val_ranking > 0.95:
+            experiment.add_tag('>0.95')
 
         scheduler.step(mean_val_acc)
 

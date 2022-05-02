@@ -21,15 +21,15 @@ source activate MIMOSA-ML
 
 X=/scratch/stoebnza/MIMOSA/ml/data/imgs
 Y=/scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv
-N=M2C_resnext101_top0
+N=M2C_resnext50_top0
 I=image
-A=resnext_101
+A=resnext_50
 B=16
 E=50
-L=7e-5
-O=sgd
-S1=256
-S2=512
-V=0.24
-VA=branch
-python3 Malware2Config.py -x $X -y $Y -n $N -i $I -a $A -b $B -e $E -l $L -o $O -s $S1 $S2 -v $V -va $VA --pretrain
+L=1e-3
+O=adam
+S1=64
+S2=64
+V=0.2
+VA=dense
+python3 Malware2Config.py -x $X -y $Y -n $N -i $I -a $A -b $B -e $E -l $L -o $O -s $S1 $S2 -v $V -va $VA
