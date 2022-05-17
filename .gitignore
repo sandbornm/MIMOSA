@@ -143,3 +143,8 @@ dmypy.json
 .idea/
 *vtak.txt
 bp_analysis/scratch.py
+bp_analysis/bp_sample_imgs
+bp_analysis/bp_imgs_w_reports
+dispatcher/samples/100_bluepill
+*.zip
+bp_analysis/bp_samples.txt
