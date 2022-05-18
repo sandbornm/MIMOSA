@@ -25,6 +25,7 @@ N=M2C_resnext50_top0
 I=image
 A=resnext_50
 B=16
+C=13
 E=50
 L=1e-3
 O=adam
@@ -32,4 +33,4 @@ S1=64
 S2=64
 V=0.2
 VA=dense
-python3 Malware2Config.py -x $X -y $Y -n $N -i $I -a $A -b $B -e $E -l $L -o $O -s $S1 $S2 -v $V -va $VA
+python run.py -x $X -y $Y -n $N -i $I -a $A -b $B -cl $C -e $E -l $L -o $O -s $S1 $S2 -v $V -va $VA

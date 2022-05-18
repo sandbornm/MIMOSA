@@ -1,4 +1,4 @@
-from os.path import join
+from os.path import join, basename, splitext
 import torch
 import cv2
 import glob
@@ -7,22 +7,32 @@ from torch.utils.data import Dataset
 
 
 class MalwareImageDataset(Dataset):
-    def __init__(self, examples_dir: str, labels_csv: str, transform=None, sz=(64,64)):
+    def __init__(self, args):
         """
         Dataset class for images of malware binaries for deep learning multilabel classification
         """
-        self.examples_dir = examples_dir
-        self.labels_csv = labels_csv
-        self.transform = transform
-        self.sz = sz
+        self.mode = args['mode']
+        self.examples_dir = args['examples_dir']
+        self.sz = args['size']
+        self.transform = args['transform']
 
-        self.examples = glob.glob(join(examples_dir, '*.png'))
-        self.labels = pd.read_csv(labels_csv) if '.tsv' not in labels_csv else pd.read_csv(labels_csv, sep='\t')
-        self.hashes = self.labels['sha1sum'].tolist()
+        self.examples = glob.glob(join(self.examples_dir, '*.png'))
+        self.hashes = [splitext(basename(ex))[0] for ex in self.examples]
 
-        self.classes = self.labels.columns[1:]
-        self.n_examples = len(self.labels)
-        self.n_classes = len(self.labels.columns) - 1
+        self.n_examples = len(self.examples)
+        self.n_classes = args['n_classes']
+        self.classes = range(self.n_classes)
+
+        if args['labels_csv'] and not self.mode.lower() == 'predict':
+            self.labels_csv = args['labels_csv']
+            self.labels = pd.read_csv(self.labels_csv) if '.tsv' not in self.labels_csv else pd.read_csv(
+                self.labels_csv, sep='\t')
+            self.classes = self.labels.columns[1:]
+
+            n_labels = len(self.labels)
+            n_label_cols = len(self.classes)
+            assert n_labels == self.n_examples, 'Number of labels (%d) does not equal number of examples (%d)' % (n_labels, self.n_examples)
+            assert n_label_cols == self.n_classes, 'Label length (%d) does not equal number of classes (%d)' % (n_label_cols, self.n_classes)
 
     def __len__(self):
         return self.n_examples

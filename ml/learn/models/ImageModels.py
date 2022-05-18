@@ -20,7 +20,7 @@ class ResNet34MultilabelClassifier(nn.Module):
         elif '34' in name.lower():
             resnet = models.resnet34(pretrained=pretrained)
         elif '50' in name.lower():
-            resnet = models.resnet34(pretrained=pretrained)
+            resnet = models.resnet50(pretrained=pretrained)
         elif '101' in name.lower():
             resnet = models.resnet101(pretrained=pretrained)
         elif '152' in name.lower():

@@ -22,10 +22,11 @@ def get_parser():
     parser.add_argument('--name', '-n', type=str, default='M2C', help='Experiment name. default: M2C')
     parser.add_argument('--load', '-f', type=str, default='', help='path to net to load')
     parser.add_argument('--frequency', '-q', type=int, default=0, help='save frequency. default= 0 (end of training)')
-    parser.add_argument('--mode', '-m', type=str, default='train', help='training mode [train | cross_val]. default: train')
+    parser.add_argument('--mode', '-m', type=str, default='train', help='training mode [train | cross_val | test | predict]. default: train')
     parser.add_argument('--modality', '-i', type=str, default='image', help='input modality [image | bytes]. default: image')
     parser.add_argument('--arch', '-a', type=str, default='resnext_50', help='architecture type given modality. image: [resnext_(50 | 101) | resnet_(18 | 32 | 50 | 101 | 152) | convnext_(tiny | small | base | large)], bytes: [conv | ff]. default: resnet')
     parser.add_argument('--cp_dir', '-c', type=str, default='.', help='checkpoint base dir. default=./cp')
+    parser.add_argument('--n_classes', '-cl', type=int, choices=range(2, 100), default=2, help='number of classes. default= 2')
 
     # hyperparams
     parser.add_argument('--size', '-s', type=int, nargs='+', default=[64,64], help='resize images to these dims (multiplied for bytes). default: --size 64 64')

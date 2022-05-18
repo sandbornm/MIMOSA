@@ -3,6 +3,7 @@ import logging
 from os.path import join
 import copy
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 import torch
@@ -21,6 +22,17 @@ import util
 from . import datasets
 from . import models
 from . import metrics
+
+
+def run(args):
+    if args.mode.lower() == 'train':
+        train(vars(args))
+    elif args.mode.lower() == 'cv' or args.mode.lower() == 'cross_val':
+        cross_val(vars(args))
+    elif args.mode.lower() == 'predict':
+        predict(vars(args))
+    else:
+        logging.error('Unknown mode entered: %s' % args.mode)
 
 
 def create_config(args):
@@ -45,16 +57,14 @@ def create_config(args):
     hidden = args['hidden']
     optim = args['optim']
     loss = args['loss']
-
+    n_classes = args['n_classes']
 
     if 'bytes' in modality.lower():
         args['size'] = np.prod(args['size'])
-        size = np.prod(size)
 
     # create dataset
     dataset = datasets.build_dataset(args)
     n_examples = dataset.n_examples
-    n_classes = dataset.n_classes
 
     # build net
     net = models.build_model(args, n_classes)
@@ -106,7 +116,6 @@ def create_config(args):
         optimizer = torch.optim.RMSprop(net.parameters(), lr=lr)
     else:
         raise ValueError('Unsupported optimizer: ', optim)
-
 
     config = {'net': net,
               'dataset': dataset,
@@ -219,6 +228,7 @@ def cross_val(args, tuning=False):
     """
     Repeated K-Fold cross-validation for a PyTorch classifier
     """
+    args['transform'] = None
     config = create_config(args)
 
     net = config['net']
@@ -334,6 +344,7 @@ def train(args, tuning=False):
     """
     Standard iterative training for a PyTorch classifier
     """
+    args['transform'] = None
     config = create_config(args)
 
     net = config['net']
@@ -450,7 +461,7 @@ def train(args, tuning=False):
         if frequency and epoch % frequency == 0:
             util.makedir(save_dir)
             torch.save(net.state_dict(),
-                      join(save_dir, f'{exp_name}_epoch{epoch + 1}.pth'))
+                       join(save_dir, f'{exp_name}_epoch{epoch + 1}.pth'))
             logging.info(f'Checkpoint {epoch + 1} saved !')
 
     # save final model
@@ -458,5 +469,73 @@ def train(args, tuning=False):
     torch.save(net.state_dict(),
                join(save_dir, f'{exp_name}_final.pth'))
     logging.info(f'Final model saved !')
+
+    torch.cuda.empty_cache()
+
+
+def predict(args):
+    """
+    Standard iterative prediction for a PyTorch classifier
+    """
+    config = create_config(args)
+
+    net = config['net']
+    dataset = config['dataset']
+    device = config['device']
+    batch_size = config['batch_size']
+    exp_name = config['exp_name']
+
+    # comet setup
+    experiment = Experiment(
+        api_key="k86kE4n1wy7wQkkCmvZeFAV3M",
+        project_name="mimosa",
+        workspace="zstoebs",
+    )
+
+    experiment.set_name(exp_name)
+    experiment.add_tag(args['arch'])
+    experiment.log_parameters(args)
+
+    net.eval()
+
+    n_examples = len(dataset)
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=False)
+
+    logging.info(f'''Starting training:
+        Batch size:      {batch_size}
+        Number of examples:   {n_examples}
+        Device:          {device.type}
+    ''')
+
+    classes = dataset.classes
+
+    preds = None
+    index = []
+    for batch in loader:
+        examples = batch['example']
+        hashes = batch['hashes']
+
+        with torch.no_grad():
+            oom = False
+            try:
+                examples, net = examples.to(device), net.to(device)
+                output = net(examples)
+            except RuntimeError:
+                oom = True
+                torch.cuda.empty_cache()
+
+            if oom:
+                examples, net = examples.cpu(), net.cpu()
+                output = net(examples)
+
+            output = output.squeeze()
+
+        output = output.detach().cpu()
+
+        preds = output if preds is None else np.vstack([preds, output])
+        index += hashes
+
+    df = pd.DataFrame(data=preds, index=index, columns=classes)
+    df.to_csv(join('results', exp_name+'.csv'))
 
     torch.cuda.empty_cache()

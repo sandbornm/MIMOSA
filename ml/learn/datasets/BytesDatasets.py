@@ -1,52 +1,1 @@
-from os.path import join
-import numpy as np
-import torch
-import glob
-import pandas as pd
-from torch.utils.data import Dataset
-
-
-class MalwareBytesDataset(Dataset):
-    def __init__(self, examples_dir: str, labels_csv: str, sz=2**10):
-        """
-        Dataset class malware binaries for deep learning multilabel classification
-        """
-        self.examples_dir = examples_dir
-        self.labels_csv = labels_csv
-        self.sz = sz
-
-        self.examples = glob.glob(join(examples_dir, '*.bin'))
-        self.labels = pd.read_csv(labels_csv) if '.tsv' not in labels_csv else pd.read_csv(labels_csv, sep='\t')
-        self.hashes = self.labels['sha1sum'].tolist()
-
-        self.classes = self.labels.columns[1:]
-        self.n_examples = len(self.labels)
-        self.n_classes = len(self.labels.columns) - 1
-
-    def __len__(self):
-        return self.n_examples
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        hash = self.hashes[idx]
-
-        # get hash's bin and read bytes into array
-        path = join(self.examples_dir, hash+'.bin')
-        dtype = np.dtype('B')
-        with open(path, "rb") as f:
-            bytes = np.fromfile(f, dtype)
-
-        if self.sz <= len(bytes):
-            bytes = bytes[:self.sz]
-        else:
-            bytes = np.hstack([bytes, np.zeros(self.sz - len(bytes), dtype)])
-
-        bytes = torch.from_numpy(bytes.astype(float)).float().unsqueeze(0)
-
-        # get the label
-        label = self.labels.loc[self.labels['sha1sum'] == hash]
-        label = label[self.classes].to_numpy()
-
-        return {'hash': hash, 'example': bytes, 'label': label}
+from os.path import join, basename, splitextimport numpy as npimport torchimport globimport pandas as pdfrom torch.utils.data import Datasetclass MalwareBytesDataset(Dataset):	def __init__(self, args):		"""		Dataset class malware binaries for deep learning multilabel classification		"""		self.mode = args['mode']		self.examples_dir = args['examples_dir']		self.sz = args['size']		self.examples = glob.glob(join(self.examples_dir, '*.bin'))		self.hashes = [splitext(basename(ex))[0] for ex in self.examples]		self.n_examples = len(self.examples)		self.n_classes = args['n_classes']		self.classes = range(self.n_classes)		if args['labels_csv'] and not self.mode.lower() == 'predict':			self.labels_csv = args['labels_csv']			self.labels = pd.read_csv(self.labels_csv) if '.tsv' not in self.labels_csv else pd.read_csv(				self.labels_csv, sep='\t')			self.classes = self.labels.columns[1:]			n_labels = len(self.labels)			n_label_cols = len(self.classes)			assert n_labels == self.n_examples, 'Number of labels (%d) does not equal number of examples (%d)' % (			n_labels, self.n_examples)			assert n_label_cols == self.n_classes, 'Label length (%d) does not equal number of classes (%d)' % (			n_label_cols, self.n_classes)	def __len__(self):		return self.n_examples	def __getitem__(self, idx):		if torch.is_tensor(idx):			idx = idx.tolist()		hash = self.hashes[idx]		# get hash's bin and read bytes into array		path = join(self.examples_dir, hash+'.bin')		dtype = np.dtype('B')		with open(path, "rb") as f:			bytes = np.fromfile(f, dtype)		if self.sz <= len(bytes):			bytes = bytes[:self.sz]		else:			bytes = np.hstack([bytes, np.zeros(self.sz - len(bytes), dtype)])		bytes = torch.from_numpy(bytes.astype(float)).float().unsqueeze(0)		# get the label		label = None		if not self.mode.lower() == 'predict':			label = self.labels.loc[self.labels['sha1sum'] == hash]			label = label[self.classes].to_numpy()		return {'hash': hash, 'example': bytes, 'label': label}
