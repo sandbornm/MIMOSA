@@ -552,5 +552,6 @@ def predict(args):
     df.to_csv(join('results', exp_name+'.csv'))
 
     experiment.log_dataframe_profile(df)
+    experiment.log_table(join('results', exp_name+'.csv'))
 
     torch.cuda.empty_cache()

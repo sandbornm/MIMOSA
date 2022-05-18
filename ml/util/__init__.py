@@ -22,41 +22,50 @@ def get_parser():
     parser.add_argument('--name', '-n', type=str, default='M2C', help='Experiment name. default: M2C')
     parser.add_argument('--load', '-f', type=str, default='', help='path to net to load')
     parser.add_argument('--frequency', '-q', type=int, default=0, help='save frequency. default= 0 (end of training)')
-    parser.add_argument('--mode', '-m', type=str, default='train', help='training mode [train | cross_val | test | predict]. default: train')
-    parser.add_argument('--modality', '-i', type=str, default='image', help='input modality [image | bytes]. default: image')
-    parser.add_argument('--arch', '-a', type=str, default='resnext_50', help='architecture type given modality. image: [resnext_(50 | 101) | resnet_(18 | 32 | 50 | 101 | 152) | convnext_(tiny | small | base | large)], bytes: [conv | ff]. default: resnet')
+    parser.add_argument('--mode', '-m', type=str, default='train',
+                        help='training mode [train | cross_val | test | predict]. default: train')
+    parser.add_argument('--modality', '-i', type=str, default='image',
+                        help='input modality [image | bytes]. default: image')
+    parser.add_argument('--arch', '-a', type=str, default='resnext_50',
+                        help='architecture type given modality. image: [resnext_(50 | 101) | resnet_(18 | 32 | 50 | 101 | 152) | convnext_(tiny | small | base | large)], bytes: [conv | ff]. default: resnet')
     parser.add_argument('--cp_dir', '-c', type=str, default='.', help='checkpoint base dir. default=./cp')
-    parser.add_argument('--n_classes', '-cl', type=int, choices=range(2, 100), default=2, help='number of classes. default= 2')
+    parser.add_argument('--n_classes', '-cl', type=int, choices=range(2, 100), default=2,
+                        help='number of classes. default= 2')
 
     # hyperparams
-    parser.add_argument('--size', '-s', type=int, nargs='+', default=[64,64], help='resize images to these dims (multiplied for bytes). default: --size 64 64')
+    parser.add_argument('--size', '-s', type=int, nargs='+', default=[64, 64],
+                        help='resize images to these dims (multiplied for bytes). default: --size 64 64')
     parser.add_argument('-e', '--epochs', type=int, default=20, help='number of epochs. default: 20', dest='epochs')
     parser.add_argument('-b', '--batch_size', type=int, default=16, help='batch size. default: 16',
                         dest='batchsize')
     parser.add_argument('-l', '--learning-rate', type=float, default=1e-3,
                         help='Learning rate. default: 1e-3', dest='lr')
-    parser.add_argument('-v', '--val_percent', metavar='V', type=float, default=0.2, help='percent of training data to use for validation set. default: 0.2', dest='val')
+    parser.add_argument('-v', '--val_percent', metavar='V', type=float, default=0.2,
+                        help='percent of training data to use for validation set. default: 0.2', dest='val')
     parser.add_argument('--pretrain', action='store_true', help='use pretrained vision models')
-    parser.add_argument('--variant', '-va', type=str, default='dense', help='model variant [dense | branch]. default: dense')
-    parser.add_argument('--hidden', '-hi', type=int, nargs='+', default=[512], help='dimensions for hidden dense layers. default: --hidden 512')
-    parser.add_argument('--optim', '-o', type=str, default='adam', help='optimizer to use [adam | sgd | rmsprop]. default: adam')
+    parser.add_argument('--variant', '-va', type=str, default='dense',
+                        help='model variant [dense | branch]. default: dense')
+    parser.add_argument('--hidden', '-hi', type=int, nargs='+', default=[512],
+                        help='dimensions for hidden dense layers. default: --hidden 512')
+    parser.add_argument('--optim', '-o', type=str, default='adam',
+                        help='optimizer to use [adam | sgd | rmsprop]. default: adam')
     parser.add_argument('--loss', '-lo', type=str, default='bce', help='loss fnc to use [bce | cce]. default: bce')
-
 
     return parser
 
+
 # https://scikit-learn.org/stable/auto_examples/model_selection/plot_learning_curve.html
 def plot_learning_curve(
-    estimator,
-    title,
-    X,
-    y,
-    scoring,
-    axes=None,
-    ylim=None,
-    cv=None,
-    n_jobs=None,
-    train_sizes=np.linspace(0.1, 1.0, 5),
+        estimator,
+        title,
+        X,
+        y,
+        scoring,
+        axes=None,
+        ylim=None,
+        cv=None,
+        n_jobs=None,
+        train_sizes=np.linspace(0.1, 1.0, 5),
 ):
     """
     Generate 3 plots: the test and training learning curve, the training
