@@ -108,6 +108,10 @@ def create_config(args):
     logging.info(f'Using device {device}')
 
     # attempt load if spec'd
+    if mode.lower() == 'predict' or mode.lower() == 'test':
+        if not load:
+            raise AssertionError('must specify a model to load in predict and test modes')
+
     if load:
         net.load_state_dict(
             torch.load(load, map_location=device)
