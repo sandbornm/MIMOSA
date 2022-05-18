@@ -22,6 +22,7 @@ source activate MIMOSA-ML
 X=/scratch/stoebnza/MIMOSA/ml/data/imgs
 Y=/scratch/stoebnza/MIMOSA/ml/data/config_multilabel.csv
 N=M2C_resnext50_top0
+M=predict
 I=image
 A=resnext_50
 B=16
@@ -33,4 +34,4 @@ S1=64
 S2=64
 V=0.2
 VA=dense
-python run.py -x $X -y $Y -n $N -i $I -a $A -b $B -cl $C -e $E -l $L -o $O -s $S1 $S2 -v $V -va $VA
+python run.py -x $X -y $Y -n $N -m $M -i $I -a $A -b $B -cl $C -e $E -l $L -o $O -s $S1 $S2 -v $V -va $VA

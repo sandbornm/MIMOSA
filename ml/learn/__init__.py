@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 import torch
 import torch.nn as nn
+from torchvision.transforms import Compose, ToTensor
 from torch.utils.data import DataLoader, random_split, SubsetRandomSampler
 from torchsummary import summary
 
@@ -59,6 +60,13 @@ def create_config(args):
     loss = args['loss']
     n_classes = args['n_classes']
 
+    # handle transforms
+    if args['modality'] == 'image':
+        args['transform'] = Compose([ToTensor()])
+    else:
+        args['transform'] = None
+
+    # handle size arg per modality
     if 'bytes' in modality.lower():
         args['size'] = np.prod(args['size'])
 
@@ -228,7 +236,6 @@ def cross_val(args, tuning=False):
     """
     Repeated K-Fold cross-validation for a PyTorch classifier
     """
-    args['transform'] = None
     config = create_config(args)
 
     net = config['net']
@@ -344,7 +351,6 @@ def train(args, tuning=False):
     """
     Standard iterative training for a PyTorch classifier
     """
-    args['transform'] = None
     config = create_config(args)
 
     net = config['net']
@@ -501,7 +507,7 @@ def predict(args):
     n_examples = len(dataset)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=False)
 
-    logging.info(f'''Starting training:
+    logging.info(f'''Starting prediction:
         Batch size:      {batch_size}
         Number of examples:   {n_examples}
         Device:          {device.type}
@@ -511,31 +517,36 @@ def predict(args):
 
     preds = None
     index = []
-    for batch in loader:
-        examples = batch['example']
-        hashes = batch['hashes']
+    with tqdm(total=n_examples, desc=f'Predicting {exp_name}', unit='img') as pbar:
+        for batch in loader:
+            examples = batch['example']
+            hashes = batch['hash']
 
-        with torch.no_grad():
-            oom = False
-            try:
-                examples, net = examples.to(device), net.to(device)
-                output = net(examples)
-            except RuntimeError:
-                oom = True
-                torch.cuda.empty_cache()
+            with torch.no_grad():
+                oom = False
+                try:
+                    examples, net = examples.to(device), net.to(device)
+                    output = net(examples)
+                except RuntimeError:
+                    oom = True
+                    torch.cuda.empty_cache()
 
-            if oom:
-                examples, net = examples.cpu(), net.cpu()
-                output = net(examples)
+                if oom:
+                    examples, net = examples.cpu(), net.cpu()
+                    output = net(examples)
 
-            output = output.squeeze()
+                output = output.squeeze()
 
-        output = output.detach().cpu()
+            output = output.detach().cpu()
 
-        preds = output if preds is None else np.vstack([preds, output])
-        index += hashes
+            preds = output if preds is None else np.vstack([preds, output])
+            index += hashes
+
+            pbar.update(examples.shape[0])
 
     df = pd.DataFrame(data=preds, index=index, columns=classes)
     df.to_csv(join('results', exp_name+'.csv'))
+
+    experiment.log_dataframe_profile(df)
 
     torch.cuda.empty_cache()

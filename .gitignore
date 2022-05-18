@@ -1,6 +1,5 @@
 # ML
-ml/data/bins
-ml/data/imgs
+ml/data
 ml/cp
 
 # Mac BS

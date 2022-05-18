@@ -54,8 +54,10 @@ class MalwareImageDataset(Dataset):
             image = cv2.resize(image, self.sz)
 
         # get the label
-        label = self.labels.loc[self.labels['sha1sum'] == hash]
-        label = label[self.classes].to_numpy()
+        label = []
+        if not self.mode.lower() == 'predict':
+            label = self.labels.loc[self.labels['sha1sum'] == hash]
+            label = label[self.classes].to_numpy()
 
         if self.transform:
             image = self.transform(image)
