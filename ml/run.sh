@@ -9,7 +9,7 @@ X=data/bp_sample_imgs  # path to examples
 Y=data/config_multilabel.csv  # path to labels
 N=M2C_resnext50_top1_BP_pred  # experiment name
 M=predict  # mode [train* | cv* | predict]  *=requires labels csv, o/w doesn't
-F=cp/M2C_resnext50_top1/M2C_resnext50_top1.pth  # path to saved model (required for test and predict modes)
+F=cp/M2C_resnext50_top1/M2C_resnext50_top1_final.pth  # path to saved model (required for test and predict modes)
 I=image  # modality [image | bytes]
 A=resnext_50  # architecture *see util/__init__.py
 B=16  # batch size
