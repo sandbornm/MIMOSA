@@ -20,7 +20,7 @@ def degree_overfit(train_metrics, val_metrics):
 
 def hit_rate(y_true, y_pred):
     """
-    Computes the hit rate i.e. how many samples are classified to the correct
+    Computes the hit rate i.e. how many samples are classified to the correct configs
 
     Parameters:
         y_true = one-hot multilabel ground truths (N, m)
@@ -30,10 +30,10 @@ def hit_rate(y_true, y_pred):
     """
     hits = 0
     for true, pred in zip(y_true, y_pred):
+        # if the ground truth is a negative and model predicts all negative, then it's a hit
         # if a single true at positive index passed threshold, then it's a hit
         # o/w total miss
-        # if there are no positive labels, then automatic hit regardless of classification
-        if not true.any() or pred[true.astype(bool)].any():
+        if (not true.any() and not pred.any()) or (true.any() and pred[true.astype(bool)].any()):
             hits += 1
 
     return hits / len(y_true)
