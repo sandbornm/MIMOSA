@@ -42,6 +42,7 @@ def search(examples_dir, labels_csv, cp_dir='~/ray/results', num_samples=10, max
         'frequency': 0,
         'mode': 'train',
         'modality': 'image',
+        'n_classes': 13,
         'arch': tune.grid_search(vision_archs),
         'size': [tune.choice([64, 128, 256, 512]),
                  tune.choice([64, 128, 256, 512])],
