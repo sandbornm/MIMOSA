@@ -28,7 +28,7 @@ config_names = ['hopper1_kvm_patched_conf1',
                 'hopper7_qemu_legacy_conf1',
                 'hopper7_qemu_legacy_conf2']
 
-config_costs = {  # startup, runtime, resources
+config_costs = {                # startup, runtime, resources
     'hopper1_kvm_patched_conf1': [536.4, 180.8, 35000],
     'hopper1_kvm_patched_conf2': [536.4, 180.8, 25000],
     'hopper2_vmware_conf3': [477, 60.7, 10000],
@@ -75,7 +75,7 @@ def threshold(arr, thresh=0.5):
 
 def balancer(loads, samples):
     """
-    Balance loads while maximizing sample execution probability
+    Balance loads while maximizing probability and minimizing runtime
     """
     print('Balancing...')
 
@@ -121,7 +121,7 @@ def scheduler(probs, configs, costs, n_servers):
         schedule = array / graphic of jobs running on each config
         negatives = inds of samples that were not predicted to run on any config
     """
-    schedule = {server: [] for server in range(n_servers)}
+    schedule = {server: {'configs': [], 'loads': [], 'costs': []} for server in range(n_servers)}
 
     ### PART 1: ALLOCATION
     print('Allocating...')
@@ -138,7 +138,7 @@ def scheduler(probs, configs, costs, n_servers):
         sorted_info = sorted(zip(conf_names, conf_probs), key=lambda a: a[1], reverse=True)
         samples[ind] = {'configs': [n for n, _ in sorted_info], 'probs': [p for _, p in sorted_info]}
 
-    # # sort columns based on prob (ascending) then flip for descending
+    # sort columns based on prob (ascending) then flip for descending
     # sorted_inds = np.flipud(np.argsort(probs, axis=0))
 
     # round robin allocation with load balancing
@@ -169,14 +169,32 @@ def scheduler(probs, configs, costs, n_servers):
                 loads[mx_conf] = [ind]
 
     print('# of negatives: ', len(negatives))
-    for config, load in loads.items():
-        print('# of samples allocated to %s: ' % config, len(load))
 
     # load balancing
-    balancer(loads, samples)
+    # balancer(loads, samples)
 
     ### PART 2: SCHEDULING
     print('Scheduling to servers...')
+
+    # compute costs for each load as in runtime and resources as a product each sample in load
+    # treat loads as (static) units (or dynamic??)
+    # assumption: 1 : 1 == server : config
+    # assumption: sample domain randomly selected --> extremely unlikely to predict only one config
+
+    if n_servers == len(configs):  # holds in sim
+        for ind, (config, load) in enumerate(loads.items()):
+            startup, runtime, resources = costs[config]
+
+            n_samples = len(load)
+            print('# of samples allocated to %s: ' % config, n_samples)
+
+            total_runtime = startup + n_samples * runtime
+            print('>>> with total runtime: ', total_runtime)
+            print('>>> with resources: ', resources)
+
+            schedule[ind]['configs'] += [config]
+            schedule[ind]['loads'] += [load]
+            schedule[ind]['costs'] += [(total_runtime, resources)]
 
     return schedule, negatives
 
