@@ -5,6 +5,7 @@ into usable formats for ML
 
 import glob
 import os
+from os.path import join
 import pandas as pd
 import numpy as np
 import cv2
@@ -53,7 +54,7 @@ def samples2images(pbins):
     for bin in bins:
         hash, _ = os.path.splitext(os.path.basename(bin))
         try:
-            with open('bins/'+bin, "rb") as f:
+            with open(join(pbins, bin), "rb") as f:
                 bytes = np.fromfile(f, dtype)
                 width = int(ceil(sqrt(len(bytes))))  # get nearest greater square root
                 bytes = np.hstack([bytes, np.zeros(width**2 - len(bytes), dtype)])
