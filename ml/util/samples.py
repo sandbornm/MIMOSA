@@ -41,6 +41,7 @@ def extract_binaries(pbitmap, psamples):
     print('Total found =', len(res))
     return res
 
+
 def samples2images(pbins):
     """
     Convert binary samples to byte arrays and save as square images.

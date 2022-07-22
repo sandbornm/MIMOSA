@@ -121,7 +121,7 @@ def scheduler(probs, configs, costs, n_servers):
         schedule = array / graphic of jobs running on each config
         negatives = inds of samples that were not predicted to run on any config
     """
-    schedule = {server: {'configs': [], 'loads': [], 'costs': []} for server in range(n_servers)}
+    schedule = {server: {'configs': [], 'loads': [], 'costs': [], 'runtime': 0} for server in range(n_servers)}
 
     ### PART 1: ALLOCATION
     print('Allocating...')
@@ -146,9 +146,9 @@ def scheduler(probs, configs, costs, n_servers):
     print('Soft limit per config: ', C)
 
     negatives = []
-    loads = {config: [] for config in configs}
+    loads = {config: {'inds': [], 'probs': []} for config in configs}
     for ind, sample in samples.items():
-        # s_probs = sample['probs']
+        s_probs = sample['probs']
         s_confs = sample['configs']
 
         # record negative prediction sample
@@ -158,15 +158,18 @@ def scheduler(probs, configs, costs, n_servers):
         # weighted allocation
         else:
             allocated = False
-            for conf in s_confs:
+            for conf, prob in zip(s_confs, s_probs):
                 if len(loads[conf]) < C:
-                    loads[conf] += [ind]
+                    loads[conf]['inds'] += [ind]
+                    loads[conf]['probs'] += [prob]
                     allocated = True
 
             # if sample couldn't be allocated, just allocate to likeliest config
             if not allocated:
                 mx_conf = s_confs[0]
-                loads[mx_conf] = [ind]
+                mx_prob = s_probs[0]
+                loads[mx_conf]['inds'] = [ind]
+                loads[mx_conf]['probs'] += [mx_prob]
 
     print('# of negatives: ', len(negatives))
 
@@ -177,24 +180,27 @@ def scheduler(probs, configs, costs, n_servers):
     print('Scheduling to servers...')
 
     # compute costs for each load as in runtime and resources as a product each sample in load
-    # treat loads as (static) units (or dynamic??)
-    # assumption: 1 : 1 == server : config
+    # treating loads as static units
     # assumption: sample domain randomly selected --> extremely unlikely to predict only one config
 
-    if n_servers == len(configs):  # holds in sim
-        for ind, (config, load) in enumerate(loads.items()):
-            startup, runtime, resources = costs[config]
+    for config, load in loads.items():
+        s_inds = load['inds']
+        # s_probs = load['probs']
+        startup, runtime, resources = costs[config]
 
-            n_samples = len(load)
-            print('# of samples allocated to %s: ' % config, n_samples)
+        n_samples = len(s_inds)
+        print('# of samples allocated to %s: ' % config, n_samples)
 
-            total_runtime = startup + n_samples * runtime
-            print('>>> with total runtime: ', total_runtime)
-            print('>>> with resources: ', resources)
+        load_runtime = startup + n_samples * runtime
+        print('>>> with total runtime: ', load_runtime)
+        print('>>> with resources: ', resources)
 
-            schedule[ind]['configs'] += [config]
-            schedule[ind]['loads'] += [load]
-            schedule[ind]['costs'] += [(total_runtime, resources)]
+        # greedy assignment to server based on current run time
+        opt_server = min(schedule, key=lambda server: schedule[server]['runtime'])
+        schedule[opt_server]['configs'] += [config]
+        schedule[opt_server]['loads'] += [load]
+        schedule[opt_server]['costs'] += [(load_runtime, resources)]
+        schedule[opt_server]['runtime'] += load_runtime
 
     return schedule, negatives
 
@@ -209,5 +215,33 @@ if __name__ == '__main__':
     schedule, negatives = scheduler(probs, config_names, config_costs, args.n_servers)
     neg_samples = hashes[negatives]
 
-    # compute average success prob total and on each server
+    # print('Schedule: \n', schedule)
+
     # compute total runtime (aka longest running server)
+    longest_server = max(schedule, key=lambda server: schedule[server]['runtime'])
+    total_runtime = schedule[longest_server]['runtime']
+    print('Server %s runs the longest with runtime %d' % (longest_server, total_runtime))
+
+    # compute average success prob total and on each server
+    avgs = []
+    lengths = []
+    for server in schedule:
+        loads = schedule[server]['loads']
+
+        s = 0
+        l = 0
+        for load in loads:
+            l_probs = load['probs']
+            s += sum(l_probs)
+            l += len(l_probs)
+
+        avg = s / l
+        print('Average success for server %d is %.2f' % (server, avg))
+
+        avgs += [avg]
+        lengths += [l]
+
+    num = sum([avg*l for avg, l in zip(avgs, lengths)])
+    denom = sum(lengths)
+    mean = num / denom
+    print('Overall success probability on schedule: ', mean)
