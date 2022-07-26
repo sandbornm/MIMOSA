@@ -12,6 +12,7 @@ to find where sample goes next.
 import argparse
 import pandas as pd
 import numpy as np
+from numpy.random import choice
 from itertools import compress
 
 config_names = ['hopper1_kvm_patched_conf1',
@@ -50,6 +51,7 @@ def get_args():
 
     parser.add_argument('--p_csv', '-p', type=str, required=True, help='path to CSV containing model output')
     parser.add_argument('--n_servers', '-ns', type=int, default=13, help='number of servers')
+    parser.add_argument('--strategy', '-st', type=str, default='wrr', help='strategy for allocating samples to configs. [wrr (weighted round robin) | random | koth]')
 
     return parser.parse_args()
 
@@ -73,8 +75,115 @@ def threshold(arr, thresh=0.5):
     return np.where(arr < thresh, 0, 1)
 
 
+def WRR_alloc(samples, configs):
+    """
+    Weighted round robin allocation
+    """
+    # round robin allocation with load balancing
+    C = len(samples) // len(configs)  # soft limit per config
+    print('Soft limit per config: ', C)
+
+    negatives = []
+    loads = {config: {'inds': [], 'probs': []} for config in configs}
+    for ind, sample in samples.items():
+        s_probs = sample['probs']
+        s_labels = sample['labels']
+
+        # record negative prediction sample
+        if sum(s_labels) == 0:
+            negatives += [ind]
+
+        # weighted allocation
+        else:
+            # filter each samples predicted configs and probs of success
+            pos_confs = list(compress(configs, s_labels))
+            pos_probs = list(compress(s_probs, s_labels))
+
+            # sort based on prob (descending) and save to dict
+            sorted_info = sorted(zip(pos_confs, pos_probs), key=lambda a: a[1], reverse=True)
+
+            allocated = False
+            for conf, prob in sorted_info:
+                if len(loads[conf]) < C:
+                    loads[conf]['inds'] += [ind]
+                    loads[conf]['probs'] += [prob]
+                    allocated = True
+
+            # if sample couldn't be allocated, just allocate to likeliest config
+            if not allocated:
+                mx_conf, mx_prob = sorted_info[0]
+                loads[mx_conf]['inds'] += [ind]
+                loads[mx_conf]['probs'] += [mx_prob]
+
+    return loads, negatives
+
+
+def random_alloc(samples, configs):
+    """
+    Random allocation
+    """
+    n_configs = len(configs)
+    negatives = []
+    loads = {config: {'inds': [], 'probs': []} for config in configs}
+    for ind, sample in samples.items():
+        s_probs = sample['probs']
+        s_labels = sample['labels']
+
+        # record negative prediction sample
+        if sum(s_labels) == 0:
+            negatives += [ind]
+
+        j = choice(n_configs)
+        rand_conf = configs[j]
+
+        loads[rand_conf]['inds'] += [ind]
+        loads[rand_conf]['probs'] += [s_probs[j]]
+
+    return loads, negatives
+
+
+def koth_alloc(samples, configs):
+    """
+    KotH (aka top prediction) allocation
+    """
+    negatives = []
+    loads = {config: {'inds': [], 'probs': []} for config in configs}
+    for ind, sample in samples.items():
+        s_probs = sample['probs']
+        s_labels = sample['labels']
+
+        # record negative prediction sample
+        if sum(s_labels) == 0:
+            negatives += [ind]
+
+        # sort based on prob (descending) and save to dict
+        sorted_info = sorted(zip(configs, s_probs), key=lambda a: a[1], reverse=True)
+
+        mx_conf, mx_prob = sorted_info[0]
+        loads[mx_conf]['inds'] += [ind]
+        loads[mx_conf]['probs'] += [mx_prob]
+
+    return loads, negatives
+
+
+def allocator(samples, configs, strategy='wrr'):
+
+    strat = strategy.lower()
+    if strat == 'wrr':
+        loads, negatives = WRR_alloc(samples, configs)
+    elif strat == 'random':
+        loads, negatives = random_alloc(samples, configs)
+    elif strat == 'koth':
+        loads, negatives = koth_alloc(samples, configs)
+    else:
+        raise ValueError('Unknown strategy: %s' % strategy)
+
+    return loads, negatives
+
+
 def balancer(loads, samples):
     """
+    **UNFINISHED**
     Balance loads while maximizing probability and minimizing runtime
     """
     print('Balancing...')
@@ -105,7 +214,7 @@ def balancer(loads, samples):
     return
 
 
-def scheduler(probs, configs, costs, n_servers):
+def scheduler(probs, configs, costs, n_servers, strategy='wrr'):
     """
     Schedule samples to configs using N servers based on costs
     and model output probs, with load balancing maximizing
@@ -121,56 +230,21 @@ def scheduler(probs, configs, costs, n_servers):
         schedule = array / graphic of jobs running on each config
         negatives = inds of samples that were not predicted to run on any config
     """
+    print('**Strategy is %s**' % strategy)
+
     schedule = {server: {'configs': [], 'loads': [], 'costs': [], 'runtime': 0} for server in range(n_servers)}
 
-    ### PART 1: ALLOCATION
-    print('Allocating...')
-
     # build sample info sheet
-    samples = {}
     labels = threshold(probs)
-    for ind, (prob, label) in enumerate(zip(probs, labels)):
-        # filter each samples predicted configs and probs of success
-        conf_names = list(compress(configs, label))
-        conf_probs = list(compress(prob, label))
-
-        # sort based on prob (descending) and save to dict
-        sorted_info = sorted(zip(conf_names, conf_probs), key=lambda a: a[1], reverse=True)
-        samples[ind] = {'configs': [n for n, _ in sorted_info], 'probs': [p for _, p in sorted_info]}
+    samples = {ind: {'probs': prob, 'labels': label} for ind, (prob, label) in enumerate(zip(probs, labels))}
 
     # sort columns based on prob (ascending) then flip for descending
     # sorted_inds = np.flipud(np.argsort(probs, axis=0))
 
-    # round robin allocation with load balancing
-    C = len(samples) // len(configs)  # soft limit per config
-    print('Soft limit per config: ', C)
+    ### PART 1: ALLOCATION
+    print('Allocating...')
 
-    negatives = []
-    loads = {config: {'inds': [], 'probs': []} for config in configs}
-    for ind, sample in samples.items():
-        s_probs = sample['probs']
-        s_confs = sample['configs']
-
-        # record negative prediction sample
-        if not s_confs:
-            negatives += [ind]
-
-        # weighted allocation
-        else:
-            allocated = False
-            for conf, prob in zip(s_confs, s_probs):
-                if len(loads[conf]) < C:
-                    loads[conf]['inds'] += [ind]
-                    loads[conf]['probs'] += [prob]
-                    allocated = True
-
-            # if sample couldn't be allocated, just allocate to likeliest config
-            if not allocated:
-                mx_conf = s_confs[0]
-                mx_prob = s_probs[0]
-                loads[mx_conf]['inds'] = [ind]
-                loads[mx_conf]['probs'] += [mx_prob]
-
+    loads, negatives = allocator(samples, configs, strategy)
     print('# of negatives: ', len(negatives))
 
     # load balancing
@@ -191,16 +265,22 @@ def scheduler(probs, configs, costs, n_servers):
         n_samples = len(s_inds)
         print('# of samples allocated to %s: ' % config, n_samples)
 
+        if n_samples == 0:
+            continue
+
         load_runtime = startup + n_samples * runtime
         print('>>> with total runtime: ', load_runtime)
         print('>>> with resources: ', resources)
 
         # greedy assignment to server based on current run time
-        opt_server = min(schedule, key=lambda server: schedule[server]['runtime'])
-        schedule[opt_server]['configs'] += [config]
-        schedule[opt_server]['loads'] += [load]
-        schedule[opt_server]['costs'] += [(load_runtime, resources)]
-        schedule[opt_server]['runtime'] += load_runtime
+        server = min(schedule, key=lambda server: schedule[server]['runtime'])
+
+        print('>>> assigned to server %d' % server)
+
+        schedule[server]['configs'] += [config]
+        schedule[server]['loads'] += [load]
+        schedule[server]['costs'] += [(load_runtime, resources)]
+        schedule[server]['runtime'] += load_runtime
 
     return schedule, negatives
 
@@ -212,7 +292,7 @@ if __name__ == '__main__':
     hashes, probs = get_data(args.p_csv)
 
     print('Starting scheduler...')
-    schedule, negatives = scheduler(probs, config_names, config_costs, args.n_servers)
+    schedule, negatives = scheduler(probs, config_names, config_costs, args.n_servers, args.strategy)
     neg_samples = hashes[negatives]
 
     # print('Schedule: \n', schedule)
@@ -227,6 +307,8 @@ if __name__ == '__main__':
     lengths = []
     for server in schedule:
         loads = schedule[server]['loads']
+        if not schedule[server]['configs']:
+            continue
 
         s = 0
         l = 0
