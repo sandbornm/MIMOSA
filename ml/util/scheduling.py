@@ -14,6 +14,7 @@ import pandas as pd
 import numpy as np
 from numpy.random import choice
 from itertools import compress
+from random import sample
 
 config_names = ['hopper1_kvm_patched_conf1',
                 'hopper1_kvm_patched_conf2',
@@ -52,6 +53,7 @@ def get_args():
     parser.add_argument('--p_csv', '-p', type=str, required=True, help='path to CSV containing model output')
     parser.add_argument('--n_servers', '-ns', type=int, default=13, help='number of servers')
     parser.add_argument('--strategy', '-st', type=str, default='wrr', help='strategy for allocating samples to configs. [wrr (weighted round robin) | random | koth]')
+    parser.add_argument('--success_rate', '-sr', type=int, default=100, choices=range(0, 101), metavar='[0-100]', help='percent success rate for simulation. Ideal = 100.')
 
     return parser.parse_args()
 
@@ -73,6 +75,20 @@ def threshold(arr, thresh=0.5):
     Binary threshold an array around a given value
     """
     return np.where(arr < thresh, 0, 1)
+
+
+def find_ind_in_schedule(ind, schedule):
+    """
+    Scours schedule for ind and returns info
+    """
+    for server, info in schedule.items():
+        for j, load in enumerate(info['loads']):
+            inds = load['inds']
+            if ind in inds:
+                pos = inds.index(ind)
+                return server, info['configs'][j], load['probs'][pos]
+
+    raise ValueError('Index %d not found in schedule' % ind)
 
 
 def WRR_alloc(samples, configs):
@@ -104,7 +120,7 @@ def WRR_alloc(samples, configs):
 
             allocated = False
             for conf, prob in sorted_info:
-                if len(loads[conf]) < C:
+                if not allocated and len(loads[conf]) < C:
                     loads[conf]['inds'] += [ind]
                     loads[conf]['probs'] += [prob]
                     allocated = True
@@ -133,6 +149,7 @@ def random_alloc(samples, configs):
         if sum(s_labels) == 0:
             negatives += [ind]
 
+        # assign randomly regardless
         j = choice(n_configs)
         rand_conf = configs[j]
 
@@ -144,8 +161,19 @@ def random_alloc(samples, configs):
 
 def koth_alloc(samples, configs):
     """
-    KotH (aka top prediction) allocation
+    KotH (aka assign all to best config) allocation
     """
+    # find best config
+    labels = []
+    for _, sample in samples.items():
+        s_labels = sample['labels']
+        labels += [s_labels]
+
+    labels = np.vstack(labels)
+    sums = np.sum(labels, axis=0)
+    best_ind = np.argmax(sums)
+    best_conf = configs[best_ind]
+
     negatives = []
     loads = {config: {'inds': [], 'probs': []} for config in configs}
     for ind, sample in samples.items():
@@ -156,12 +184,9 @@ def koth_alloc(samples, configs):
         if sum(s_labels) == 0:
             negatives += [ind]
 
-        # sort based on prob (descending) and save to dict
-        sorted_info = sorted(zip(configs, s_probs), key=lambda a: a[1], reverse=True)
-
-        mx_conf, mx_prob = sorted_info[0]
-        loads[mx_conf]['inds'] += [ind]
-        loads[mx_conf]['probs'] += [mx_prob]
+        # assign to supposed best conf
+        loads[best_conf]['inds'] += [best_ind]
+        loads[best_conf]['probs'] += [s_probs[best_ind]]
 
     return loads, negatives
 
@@ -230,8 +255,6 @@ def scheduler(probs, configs, costs, n_servers, strategy='wrr'):
         schedule = array / graphic of jobs running on each config
         negatives = inds of samples that were not predicted to run on any config
     """
-    print('**Strategy is %s**' % strategy)
-
     schedule = {server: {'configs': [], 'loads': [], 'costs': [], 'runtime': 0} for server in range(n_servers)}
 
     # build sample info sheet
@@ -269,8 +292,8 @@ def scheduler(probs, configs, costs, n_servers, strategy='wrr'):
             continue
 
         load_runtime = startup + n_samples * runtime
-        print('>>> with total runtime: ', load_runtime)
-        print('>>> with resources: ', resources)
+        print('>>> with total runtime: %d' % load_runtime)
+        print('>>> with resources: %d' % resources)
 
         # greedy assignment to server based on current run time
         server = min(schedule, key=lambda server: schedule[server]['runtime'])
@@ -285,45 +308,134 @@ def scheduler(probs, configs, costs, n_servers, strategy='wrr'):
     return schedule, negatives
 
 
+def simulate(probs, configs, costs, n_servers, strategy, success=1.0):
+    """
+    Simulate a run of scheduling based on servers and success rate
+    """
+    print('** Strategy is %s' % strategy)
+
+    rem = list(range(len(probs)))
+    results = {}
+    k = 0
+    data = probs.copy()
+    while rem:
+        k += 1
+
+        print('\n\n** Iteration: ', k)
+        schedule, negatives = scheduler(data[rem, :], configs, costs, n_servers, strategy)
+        # print('Schedule: \n', schedule)
+
+        # compute total runtime (aka longest running server)
+        longest_server = max(schedule, key=lambda server: schedule[server]['runtime'])
+        total_runtime = schedule[longest_server]['runtime']
+        print('Server %s runs the longest with runtime %d' % (longest_server, total_runtime))
+
+        # compute average success prob total and on each server
+        avgs = []
+        lengths = []
+        for server in schedule:
+            loads = schedule[server]['loads']
+            if not schedule[server]['configs']:
+                continue
+
+            s = 0
+            l = 0
+            for load in loads:
+                l_probs = load['probs']
+                s += sum(l_probs)
+                l += len(l_probs)
+
+            avg = s / l
+            print('Average predictive probability for server %d is %.2f' % (server, avg))
+
+            avgs += [avg]
+            lengths += [l]
+
+        num = sum([avg * l for avg, l in zip(avgs, lengths)])
+        denom = sum(lengths)
+        mean = num / denom
+        print('Overall predictive probability on schedule is %.2f' % mean)
+
+        # store mean and runtime for this iter in results
+        results[k] = {'predictive': mean,
+                   'runtime': total_runtime}
+
+        # update rem indices based on negatives
+        neg_rem = [rem[ind] for ind in negatives]
+        new_rem = [ind for ind in rem if ind not in neg_rem]
+
+        # update rem indices based on success rate
+        subsample = int(len(rem) * (1.0 - success))
+        new_rem = sample(new_rem, subsample)
+
+        # update probs based on new rem s.t. failed config = 0.0
+        for ind in new_rem:
+            old = rem.index(ind)
+            _, config, _ = find_ind_in_schedule(old, schedule)
+            j = configs.index(config)
+            probs[ind, j] = 0.0
+
+        rem = new_rem
+
+    print('\n\n** # of iters: ', len(results))
+    return results
+
+
+def server_vs_time(probs, configs, costs, max_servers, success):
+    """
+    Compute scalability data for # of servers vs time
+    """
+    strategies = ['wrr', 'random', 'koth', 'mimosa']
+    overall = {strategy: {} for strategy in strategies}
+    for strategy in strategies:
+        for n_servers in range(1, max_servers+1):
+            if strategy == 'mimosa':
+                results = simulate(probs, configs, costs, n_servers, 'wrr', success)
+            else:
+                results = simulate(probs, configs, costs, n_servers, strategy)
+
+            preds = []
+            runtimes = []
+            for k, result in results.items():
+                preds += [result['predictive']]
+                runtimes += [result['runtime']]
+
+            pred = sum(preds) / len(preds)
+            runtime = sum(runtimes)
+
+            overall[strategy][n_servers] = {'predictive': pred, 'runtime': runtime, 'iters': len(results)}
+
+    df = pd.DataFrame.from_dict(overall)
+    df.to_csv('servers=%d_vs_time_success=%.2f.csv' % (max_servers, success))
+
+
+def acc_vs_time():
+    return
+
+
+def acc_vs_iters():
+    return
+
+
 if __name__ == '__main__':
     args = get_args()
+    success_rate = args.success_rate / 100
 
-    print('Getting data...')
     hashes, probs = get_data(args.p_csv)
+    print('# of samples: ', len(hashes))
 
-    print('Starting scheduler...')
-    schedule, negatives = scheduler(probs, config_names, config_costs, args.n_servers, args.strategy)
-    neg_samples = hashes[negatives]
+    # print('Scheduling a single run...')
+    # results = simulate(probs, config_names, config_costs, args.n_servers, args.strategy, success_rate)
+    # preds = []
+    # runtimes = []
+    # for k, result in results.items():
+    #     preds += [result['predictive']]
+    #     runtimes += [result['runtime']]
+    #
+    # pred = sum(preds) / len(preds)
+    # runtime = sum(runtimes)
+    # print('** Average predictive value: %.2f' % pred)
+    # print('** Total runtime: %d' % runtime)
 
-    # print('Schedule: \n', schedule)
-
-    # compute total runtime (aka longest running server)
-    longest_server = max(schedule, key=lambda server: schedule[server]['runtime'])
-    total_runtime = schedule[longest_server]['runtime']
-    print('Server %s runs the longest with runtime %d' % (longest_server, total_runtime))
-
-    # compute average success prob total and on each server
-    avgs = []
-    lengths = []
-    for server in schedule:
-        loads = schedule[server]['loads']
-        if not schedule[server]['configs']:
-            continue
-
-        s = 0
-        l = 0
-        for load in loads:
-            l_probs = load['probs']
-            s += sum(l_probs)
-            l += len(l_probs)
-
-        avg = s / l
-        print('Average success for server %d is %.2f' % (server, avg))
-
-        avgs += [avg]
-        lengths += [l]
-
-    num = sum([avg*l for avg, l in zip(avgs, lengths)])
-    denom = sum(lengths)
-    mean = num / denom
-    print('Overall success probability on schedule: ', mean)
+    print('Computing server vs time...')
+    server_vs_time(probs, config_names, config_costs, args.n_servers, success_rate)
