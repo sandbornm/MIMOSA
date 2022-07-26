@@ -369,8 +369,9 @@ def simulate(probs, configs, costs, n_servers, strategy, success=1.0):
         new_rem = [ind for ind in rem if ind not in neg_rem]
 
         # update rem indices based on success rate
-        subsample = int(len(rem) * (1.0 - success))
+        subsample = int(len(new_rem) * (1.0 - success))
         new_rem = sample(new_rem, subsample)
+
 
         # update probs based on new rem s.t. failed config = 0.0
         for ind in new_rem:
@@ -413,12 +414,31 @@ def server_vs_time(probs, configs, costs, max_servers, success):
     df.to_csv(join(out_dir, 'servers=%d_vs_time_success=%.2f.csv' % (max_servers, success)))
 
 
-def acc_vs_time():
-    return
+def acc_vs_time_vs_iters(probs, configs, costs, n_servers):
+    """
+    Compute scalability data for accuracy vs time vs iters
+    """
+    overall = {'acc': [], 'runtime': [], 'iters': [], 'predictive': []}
+    for per in range(5, 101, 5):
+        acc = per / 100
+        results = simulate(probs, configs, costs, n_servers, 'wrr', acc)
 
+        preds = []
+        runtimes = []
+        for k, result in results.items():
+            preds += [result['predictive']]
+            runtimes += [result['runtime']]
 
-def acc_vs_iters():
-    return
+        pred = sum(preds) / len(preds)
+        runtime = sum(runtimes)
+
+        overall['acc'] += [acc]
+        overall['runtime'] += [runtime]
+        overall['iters'] += [len(results)]
+        overall['predictive'] += [pred]
+
+    df = pd.DataFrame.from_dict(overall)
+    df.to_csv(join(out_dir, 'acc_vs_time_vs_iters.csv'))
 
 
 if __name__ == '__main__':
@@ -442,5 +462,8 @@ if __name__ == '__main__':
     # print('** Average predictive value: %.2f' % pred)
     # print('** Total runtime: %d' % runtime)
 
-    print('Computing server vs time...')
-    server_vs_time(probs, config_names, config_costs, args.n_servers, success_rate)
+    # print('Computing server vs time...')
+    # server_vs_time(probs, config_names, config_costs, args.n_servers, success_rate)
+
+    print('Computing accuracy vs time vs iters...')
+    acc_vs_time_vs_iters(probs, config_names, config_costs, args.n_servers)
