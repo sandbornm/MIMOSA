@@ -9,6 +9,7 @@ Key considerations:
 to find where sample goes next.
 """
 
+from os.path import join
 import argparse
 import pandas as pd
 import numpy as np
@@ -46,6 +47,8 @@ config_costs = {                # startup, runtime, resources
     'hopper6_kvm_legacy_conf2': [543.3, 327.4, 99999]
 }
 
+out_dir = '.'
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='Scheduling args')
@@ -54,6 +57,7 @@ def get_args():
     parser.add_argument('--n_servers', '-ns', type=int, default=13, help='number of servers')
     parser.add_argument('--strategy', '-st', type=str, default='wrr', help='strategy for allocating samples to configs. [wrr (weighted round robin) | random | koth]')
     parser.add_argument('--success_rate', '-sr', type=int, default=100, choices=range(0, 101), metavar='[0-100]', help='percent success rate for simulation. Ideal = 100.')
+    parser.add_argument('--out_dir', '-o', type=str, default='.', help='Output directory')
 
     return parser.parse_args()
 
@@ -406,7 +410,7 @@ def server_vs_time(probs, configs, costs, max_servers, success):
             overall[strategy][n_servers] = {'predictive': pred, 'runtime': runtime, 'iters': len(results)}
 
     df = pd.DataFrame.from_dict(overall)
-    df.to_csv('servers=%d_vs_time_success=%.2f.csv' % (max_servers, success))
+    df.to_csv(join(out_dir, 'servers=%d_vs_time_success=%.2f.csv' % (max_servers, success)))
 
 
 def acc_vs_time():
@@ -419,6 +423,7 @@ def acc_vs_iters():
 
 if __name__ == '__main__':
     args = get_args()
+    out_dir = args.out_dir
     success_rate = args.success_rate / 100
 
     hashes, probs = get_data(args.p_csv)
