@@ -328,7 +328,7 @@ def simulate(probs, configs, costs, n_servers, strategy, success=1.0):
         print('\n\n** Iteration: ', k)
         schedule, negatives = scheduler(data[rem, :], configs, costs, n_servers, strategy)
         # print('Schedule: \n', schedule)
-        if len(negatives) == len(rem):  # empty schedule bc all failed so done
+        if len(negatives) == len(rem):  # empty schedule bc all ended up as negatives --> done
             break
 
         # compute total runtime (aka longest running server)
@@ -373,7 +373,6 @@ def simulate(probs, configs, costs, n_servers, strategy, success=1.0):
         # update rem indices based on success rate
         subsample = int(len(new_rem) * (1.0 - success))
         new_rem = sample(new_rem, subsample)
-
 
         # update probs based on new rem s.t. failed config = 0.0
         for ind in new_rem:
