@@ -328,6 +328,8 @@ def simulate(probs, configs, costs, n_servers, strategy, success=1.0):
         print('\n\n** Iteration: ', k)
         schedule, negatives = scheduler(data[rem, :], configs, costs, n_servers, strategy)
         # print('Schedule: \n', schedule)
+        if len(negatives) == len(rem):  # empty schedule bc all failed so done
+            break
 
         # compute total runtime (aka longest running server)
         longest_server = max(schedule, key=lambda server: schedule[server]['runtime'])
@@ -378,7 +380,7 @@ def simulate(probs, configs, costs, n_servers, strategy, success=1.0):
             old = rem.index(ind)
             _, config, _ = find_ind_in_schedule(old, schedule)
             j = configs.index(config)
-            probs[ind, j] = 0.0
+            data[ind, j] = 0.0
 
         rem = new_rem
 
@@ -391,7 +393,7 @@ def server_vs_time(probs, configs, costs, max_servers, success):
     Compute scalability data for # of servers vs time
     """
     strategies = ['wrr', 'random', 'koth', 'mimosa']
-    overall = {strategy: {} for strategy in strategies}
+    overall = {strategy: {'n_servers': [], 'predictive': [], 'runtime': [], 'iters': []} for strategy in strategies}
     for strategy in strategies:
         for n_servers in range(1, max_servers+1):
             if strategy == 'mimosa':
@@ -408,10 +410,16 @@ def server_vs_time(probs, configs, costs, max_servers, success):
             pred = sum(preds) / len(preds)
             runtime = sum(runtimes)
 
-            overall[strategy][n_servers] = {'predictive': pred, 'runtime': runtime, 'iters': len(results)}
+            overall[strategy]['n_servers'] += [n_servers]
+            overall[strategy]['runtime'] += [runtime]
+            overall[strategy]['iters'] += [len(results)]
+            overall[strategy]['predictive'] += [pred]
 
-    df = pd.DataFrame.from_dict(overall)
-    df.to_csv(join(out_dir, 'servers=%d_vs_time_success=%.2f.csv' % (max_servers, success)))
+    fname = join(out_dir, 'servers=%d_vs_time_success=%.2f.xlsx' % (max_servers, success))
+    with pd.ExcelWriter(fname) as excel:
+        for strategy in overall:
+            df = pd.DataFrame.from_dict(overall[strategy])
+            df.to_excel(excel, sheet_name=strategy)
 
 
 def acc_vs_time_vs_iters(probs, configs, costs, n_servers):
@@ -437,8 +445,9 @@ def acc_vs_time_vs_iters(probs, configs, costs, n_servers):
         overall['iters'] += [len(results)]
         overall['predictive'] += [pred]
 
+    fname = join(out_dir, 'acc_vs_time_vs_iters.xlsx')
     df = pd.DataFrame.from_dict(overall)
-    df.to_csv(join(out_dir, 'acc_vs_time_vs_iters.csv'))
+    df.to_excel(fname)
 
 
 if __name__ == '__main__':
@@ -462,8 +471,8 @@ if __name__ == '__main__':
     # print('** Average predictive value: %.2f' % pred)
     # print('** Total runtime: %d' % runtime)
 
-    # print('Computing server vs time...')
-    # server_vs_time(probs, config_names, config_costs, args.n_servers, success_rate)
+    print('Computing server vs time...')
+    server_vs_time(probs, config_names, config_costs, args.n_servers, success_rate)
 
     print('Computing accuracy vs time vs iters...')
     acc_vs_time_vs_iters(probs, config_names, config_costs, args.n_servers)
