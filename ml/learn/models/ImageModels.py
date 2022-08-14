@@ -56,6 +56,11 @@ class ResNet34MultilabelClassifier(nn.Module):
 
         return self.sigmoid(x)
 
+    def reinit(self):
+        for layer in self.base_model.children():
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
+
 
 class ResNeXt50MultilabelClassifier(nn.Module):
     def __init__(self, name, n_classes, pretrained=False, variant: str='dense'):
@@ -101,6 +106,11 @@ class ResNeXt50MultilabelClassifier(nn.Module):
             return torch.cat([self.sigmoid(l(x)) for l in self.leaves], dim=1)
 
         return self.sigmoid(x)
+
+    def reinit(self):
+        for layer in self.base_model.children():
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
 
 
 class ConvNeXtMultilabelClassifier(nn.Module):
@@ -150,3 +160,8 @@ class ConvNeXtMultilabelClassifier(nn.Module):
             return torch.cat([self.sigmoid(l(x)) for l in self.leaves], dim=1)
 
         return self.sigmoid(x)
+
+    def reinit(self):
+        for layer in self.base_model.children():
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()

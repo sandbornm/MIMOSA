@@ -189,7 +189,7 @@ def koth_alloc(samples, configs):
             negatives += [ind]
 
         # assign to supposed best conf
-        loads[best_conf]['inds'] += [best_ind]
+        loads[best_conf]['inds'] += [ind]
         loads[best_conf]['probs'] += [s_probs[best_ind]]
 
     return loads, negatives
@@ -210,37 +210,78 @@ def allocator(samples, configs, strategy='wrr'):
     return loads, negatives
 
 
-def balancer(loads, samples):
+def compute_cost(config, costs, n_samples):
+    startup, runtime, resources = costs[config]
+    return startup + n_samples * runtime, resources
+
+
+def balancer(schedule, costs):
     """
-    **UNFINISHED**
-    Balance loads while maximizing probability and minimizing runtime
+    Balance loads across available servers in schedule
     """
-    print('Balancing...')
 
-    # find min and max loads
-    lens = {}
-    mx = None
-    mx_conf = ""
-    mn = None
-    mn_conf = ""
-    for config, load in loads.items():
-        n_samples = len(load)
-        lens[config] = n_samples
-        if not mx or n_samples > mx:
-            mx = n_samples
-            mx_conf = config
-        if not mn or n_samples < mn:
-            mn = n_samples
-            mn_conf = config
+    for server in schedule:
 
-    # rebalance excess samples to other configs
-    diff = mx - mn
-    mx_load = loads[mx_conf]
-    base, excess = mx_load[:len(mx_load) - diff], mx_load[len(mx_load) - diff:]
+        # if server is empty
+        if schedule[server]['runtime'] == 0:
 
-    # recursive rebalancing??
+            # find the longest server
+            longest_server = max(schedule, key=lambda server: schedule[server]['runtime'])
+            print('Balancing from server %d to server %d' % (longest_server, server))
 
-    return
+            # if multiple loads, move longest load to empty server
+            if len(schedule[longest_server]['costs']) > 1:
+                mx_ind = max(enumerate(schedule[longest_server]['costs']), key=lambda x: x[1][0])
+                config = schedule[longest_server]['configs'][mx_ind]
+                load = schedule[longest_server]['loads'][mx_ind]
+                cost = schedule[longest_server]['costs'][mx_ind]
+                load_runtime = cost[0]
+
+                # assign
+                schedule[server]['configs'] += [config]
+                schedule[server]['loads'] += [load]
+                schedule[server]['costs'] += [cost]
+                schedule[server]['runtime'] += load_runtime
+
+                # update
+                del schedule[longest_server]['configs'][mx_ind]
+                del schedule[longest_server]['loads'][mx_ind]
+                del schedule[longest_server]['costs'][mx_ind]
+                schedule[longest_server]['runtime'] -= load_runtime
+
+            # if only one load, split in half and move to empty server
+            else:
+                config = schedule[longest_server]['configs'][0]
+                load = schedule[longest_server]['loads'][0]
+                inds = load['inds']
+                probs = load['probs']
+
+                n_samples = len(inds)
+                if n_samples > 1:
+                    half = n_samples // 2
+
+                    first_inds = inds[:half]
+                    second_inds = inds[half:]
+
+                    first_probs = probs[:half]
+                    second_probs = probs[half:]
+
+                    first_load = {'inds': first_inds, 'probs': first_probs}
+                    second_load = {'inds': second_inds, 'probs': second_probs}
+
+                    first_cost = compute_cost(config, costs, len(first_inds))
+                    second_cost = compute_cost(config, costs, len(second_inds))
+
+                    # assign
+                    schedule[server]['configs'] += [config]
+                    schedule[server]['loads'] += [second_load]
+                    schedule[server]['costs'] += [second_cost]
+                    schedule[server]['runtime'] += second_cost[0]
+
+                    # update
+                    schedule[longest_server]['loads'][0] = first_load
+                    schedule[longest_server]['costs'][0] = first_cost
+                    schedule[longest_server]['runtime'] -= second_cost[0]
 
 
 def scheduler(probs, configs, costs, n_servers, strategy='wrr'):
@@ -274,9 +315,6 @@ def scheduler(probs, configs, costs, n_servers, strategy='wrr'):
     loads, negatives = allocator(samples, configs, strategy)
     print('# of negatives: ', len(negatives))
 
-    # load balancing
-    # balancer(loads, samples)
-
     ### PART 2: SCHEDULING
     print('Scheduling to servers...')
 
@@ -284,18 +322,17 @@ def scheduler(probs, configs, costs, n_servers, strategy='wrr'):
     # treating loads as static units
     # assumption: sample domain randomly selected --> extremely unlikely to predict only one config
 
+    total_samples = 0
     for config, load in loads.items():
         s_inds = load['inds']
-        # s_probs = load['probs']
-        startup, runtime, resources = costs[config]
 
         n_samples = len(s_inds)
+        total_samples += n_samples
         print('# of samples allocated to %s: ' % config, n_samples)
-
         if n_samples == 0:
             continue
 
-        load_runtime = startup + n_samples * runtime
+        load_runtime, resources = compute_cost(config, costs, n_samples)
         print('>>> with total runtime: %d' % load_runtime)
         print('>>> with resources: %d' % resources)
 
@@ -309,6 +346,10 @@ def scheduler(probs, configs, costs, n_servers, strategy='wrr'):
         schedule[server]['costs'] += [(load_runtime, resources)]
         schedule[server]['runtime'] += load_runtime
 
+    # load balancing
+    if total_samples >= n_servers:
+        balancer(schedule, costs)
+
     return schedule, negatives
 
 
@@ -317,6 +358,7 @@ def simulate(probs, configs, costs, n_servers, strategy, success=1.0):
     Simulate a run of scheduling based on servers and success rate
     """
     print('** Strategy is %s' % strategy)
+    print('** Success rate is %.1f' % success)
 
     rem = list(range(len(probs)))
     results = {}
@@ -391,14 +433,16 @@ def server_vs_time(probs, configs, costs, max_servers, success):
     """
     Compute scalability data for # of servers vs time
     """
-    strategies = ['wrr', 'random', 'koth', 'mimosa']
+    strategies = ['ideal', 'random', 'koth', 'mimosa']
     overall = {strategy: {'n_servers': [], 'predictive': [], 'runtime': [], 'iters': []} for strategy in strategies}
     for strategy in strategies:
         for n_servers in range(1, max_servers+1):
             if strategy == 'mimosa':
                 results = simulate(probs, configs, costs, n_servers, 'wrr', success)
+            elif strategy == 'ideal':
+                results = simulate(probs, configs, costs, n_servers, 'wrr')
             else:
-                results = simulate(probs, configs, costs, n_servers, strategy)
+                results = simulate(probs, configs, costs, n_servers, strategy, success)
 
             preds = []
             runtimes = []

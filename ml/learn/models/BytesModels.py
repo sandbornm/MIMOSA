@@ -57,6 +57,11 @@ class FFBytesMultilabelClassifier(nn.Module):
 
         return self.sigmoid(x)
 
+    def reinit(self):
+        for layer in self.base_model.children():
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
+
 
 class Conv1DBytesMultilabelClassifier(nn.Module):
     def __init__(self, name, n_classes, n_hidden=None, variant: str='dense'):
@@ -113,3 +118,8 @@ class Conv1DBytesMultilabelClassifier(nn.Module):
             return torch.cat([self.sigmoid(l(x)) for l in self.leaves], dim=1)
 
         return self.sigmoid(x)
+
+    def reinit(self):
+        for layer in self.base_model.children():
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()

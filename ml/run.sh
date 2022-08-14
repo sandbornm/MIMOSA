@@ -4,7 +4,7 @@
 #caffeinate python run.py -x data/bins -y data/config_multilabel.csv -n M2C_ff_1 -i bytes -a ff -hi 1024 1024 512 512
 #caffeinate python run.py -x data/imgs -y data/config_multilabel.csv -n M2C_resnext50_0 -i image -a resnext_50
 
-# training
+### TRAINING
 X=data/imgs  # path to examples
 Y=data/config_multilabel.csv  # path to labels
 N=M2C_resnext50_top2  # experiment name
@@ -24,7 +24,7 @@ VA=dense  # output layer type [dense | branch]
 # the command
 python run.py -x $X -y $Y -n $N -m $M -i $I -a $A -b $B -cl $C -e $E -l $L -o $O -s $S1 $S2 -v $V -va $VA
 
-# prediction
+### INFERENCE
 #X=data/bp_sample_imgs  # path to examples
 #N=M2C_resnext50_top1_BP_pred_test  # experiment name
 #M=predict  # mode [train* | cv* | predict]  *=requires labels csv, o/w doesn't
